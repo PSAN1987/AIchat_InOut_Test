@@ -168,3 +168,14 @@ def handle_message(event):
 if __name__ == "__main__":
     create_table()
     app.run()
+    
+    # Top page for checking if the bot is running
+@app.route('/', methods=['GET'])
+def toppage():
+    return 'Hello world!'
+
+# Bot startup code
+if __name__ == "__main__":
+    # Set `debug=True` for local testing
+    app.run(host="0.0.0.0", port=8000, debug=True)
+
