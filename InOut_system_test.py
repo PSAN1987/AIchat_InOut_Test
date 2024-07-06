@@ -15,25 +15,25 @@ import sqlite3
 from dotenv import load_dotenv
 from datetime import datetime
 
-# .envファイルを読み込む
+# Load .env file
 load_dotenv()
 
-# 環境変数の設定
+# Assign environment variables to variables
 CHANNEL_ACCESS_TOKEN = os.environ["CHANNEL_ACCESS_TOKEN"]
 CHANNEL_SECRET = os.environ["CHANNEL_SECRET"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
-# OpenAI APIキーの設定
+# Set OpenAI API key
 openai.api_key = OPENAI_API_KEY
 
-# Flaskアプリのインスタンス化
+# Instantiate Flask app
 app = Flask(__name__)
 
-# LINEのアクセストークンを読み込む
+# Load LINE access token
 configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
-# OpenAI APIから応答を取得する関数
+# Function to get response from OpenAI API
 def get_chat_response(prompt, model="gpt-4"):
     response = openai.ChatCompletion.create(
         model=model,
@@ -42,7 +42,7 @@ def get_chat_response(prompt, model="gpt-4"):
     )
     return response.choices[0].message['content']
 
-# テーブルを作成する関数
+# Create table if not exists
 def create_table():
     conn = sqlite3.connect('attendance.db')
     cursor = conn.cursor()
@@ -57,7 +57,7 @@ def create_table():
     conn.commit()
     conn.close()
 
-# 従業員データをデータベースに保存する関数
+# Save employee data to database
 def save_to_database(employee_data):
     conn = sqlite3.connect('attendance.db')
     cursor = conn.cursor()
@@ -72,7 +72,7 @@ def save_to_database(employee_data):
     conn.commit()
     conn.close()
 
-# 従業員データの初期化
+# Initialize employee data dictionary
 employee_data = {
     "名前": None,
     "日時": None,
@@ -82,17 +82,17 @@ employee_data = {
     "業務内容サマリ": None
 }
 
-# コールバック関数
+# Callback function
 @app.route("/callback", methods=['POST'])
 def callback():
-    # X-Line-Signatureヘッダーの値を取得
+    # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
 
-    # リクエストボディをテキストとして取得
+    # get request body as text
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
 
-    # Webhookボディを処理
+    # handle webhook body
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
@@ -101,72 +101,76 @@ def callback():
 
     return 'OK'
 
-# 友達追加時のメッセージ送信
+# Send a message when a friend is added
 @handler.add(FollowEvent)
 def handle_follow(event):
-    # APIクライアントのインスタンス化
+    # Instantiate API client
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
 
-        # 返信
+        # Reply
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=event.reply_token,
             messages=[TextMessage(text='Thank You!')]
         ))
 
-# メッセージ受信時の処理
+# Echo back received messages
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    # APIクライアントのインスタンス化
+    # Instantiate API client
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
 
-        received_message = event.message.text
+        user_message = event.message.text
         reply_token = event.reply_token
 
         if employee_data["名前"] is None:
-            employee_data["名前"] = received_message
-            replay = "出勤時間を教えてください（例：09:00）。"
+            employee_data["名前"] = user_message
+            response_message = "出勤時間を教えてください（例：09:00）。"
         
         elif employee_data["出勤時間"] is None:
             try:
-                current_date = datetime.now().strftime("%Y-%m-%d")
-                employee_data["出勤時間"] = datetime.strptime(f"{current_date} {received_message}", "%Y-%m-%d %H:%M")
-                replay = "退勤時間を教えてください（例：18:00）。"
+                employee_data["出勤時間"] = datetime.strptime(user_message, "%H:%M")
+                response_message = "退勤時間を教えてください（例：18:00）。"
             except ValueError:
-                replay = "時間の形式が正しくありません。再度入力してください。出勤時間を教えてください（例：09:00）。"
+                response_message = "時間の形式が正しくありません。再度入力してください。出勤時間を教えてください（例：09:00）。"
 
         elif employee_data["退勤時間"] is None:
             try:
-                current_date = datetime.now().strftime("%Y-%m-%d")
-                employee_data["退勤時間"] = datetime.strptime(f"{current_date} {received_message}", "%Y-%m-%d %H:%M")
-                replay = "休憩時間を教えてください（例：1時間）。"
+                employee_data["退勤時間"] = datetime.strptime(user_message, "%H:%M")
+                response_message = "休憩時間を教えてください（例：1時間）。"
             except ValueError:
-                replay = "時間の形式が正しくありません。再度入力してください。退勤時間を教えてください（例：18:00）。"
+                response_message = "時間の形式が正しくありません。再度入力してください。退勤時間を教えてください（例：18:00）。"
 
         elif employee_data["休憩時間"] is None:
-            employee_data["休憩時間"] = received_message
-            replay = "今日の業務内容を教えてください。"
+            employee_data["休憩時間"] = user_message
+            response_message = "今日の業務内容を教えてください。"
         
         elif employee_data["業務内容サマリ"] is None:
-            employee_data["業務内容サマリ"] = received_message
+            employee_data["業務内容サマリ"] = user_message
             current_date = datetime.now()
             employee_data["日時"] = current_date.strftime("%Y-%m-%d %H:%M:%S")
             save_to_database(employee_data)
-            replay = "勤怠情報を保存しました。ありがとうございました。"
+            response_message = "勤怠情報を保存しました。ありがとうございました。"
 
-            # 次のユーザーのためにemployee_dataをリセット
+            # Reset employee_data for next user
             for key in employee_data.keys():
                 employee_data[key] = None
 
         else:
-            replay = "勤怠情報が既に保存されています。"
+            response_message = "勤怠情報が既に保存されています。"
 
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=reply_token,
-            messages=[TextMessage(text=replay)]
+            messages=[TextMessage(text=response_message)]
         ))
 
+# Top page for checking if the bot is running
+@app.route('/', methods=['GET'])
+def toppage():
+    return 'Hello world!'
+
+# Bot startup code
 if __name__ == "__main__":
-    create_table()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Set `debug=True` for local testing
+    app.run(host="0.0.0.0", port=8000, debug=True)
