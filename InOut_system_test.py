@@ -179,10 +179,7 @@ def handle_message(event):
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=reply_token,
             messages=[TextMessage(text=response_message)]  
-        except Exception as e:
-        # エラーハンドリング
-        print(f"Error: {e}")
-        line_bot_api.reply_message(reply_token, TextSendMessage(text="エラーが発生しました。もう一度お試しください。"))
+        ))
 
 
 # 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
