@@ -114,6 +114,16 @@ def handle_follow(event):
             messages=[TextMessage(text='こんにちは！お名前を教えてください。')]
         ))
 
+# 初期設定
+employee_data = {
+    "名前": None,
+    "出勤時間": None,
+    "退勤時間": None,
+    "休憩時間": None,
+    "業務内容サマリ": None,
+    "日時": None
+}
+
 # メッセージ受信時の処理
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -154,30 +164,63 @@ def handle_message(event):
             current_date = datetime.now()
             employee_data["日時"] = current_date.strftime("%Y-%m-%d %H:%M:%S")
             save_to_database(employee_data)
-            response_message = "勤怠情報を保存しました。ありがとうございました。"
+            response_message = "勤怠情報を保存しました。ありがとうございました。次に、今日の業務についてお話しましょう。"
 
-            # 次のユーザーのためにemployee_dataをリセット
+            # 勤怠情報が保存されたらリセット
             for key in employee_data.keys():
                 employee_data[key] = None
+
+            # 勤怠情報保存メッセージをユーザーに送信
+            line_bot_api.reply_message(ReplyMessageRequest(
+                reply_token=reply_token,
+                messages=[TextMessage(text=response_message)]
+            ))
+            return
 
         else:
             response_message = "勤怠情報が既に保存されています。"
 
-        # AI応答を生成し、ユーザーに返信
-        response = openai.chat.completions.create (
+        # 勤怠情報収集メッセージをユーザーに返信
+        line_bot_api.reply_message(ReplyMessageRequest(
+            reply_token=reply_token,
+            messages=[TextMessage(text=response_message)]
+        ))
+
+# AI応答を処理する別のハンドラを追加
+@handler.add(MessageEvent, message=TextMessageContent)
+def handle_ai_message(event):
+    if all(value is not None for value in employee_data.values()):
+        user_message = event.message.text
+        reply_token = event.reply_token
+
+        # AI応答を生成
+        response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "あなたは役に立つアシスタントです。今日の業務の議論について集中してください。"},
                 {"role": "user", "content": user_message}
             ]
         )
-        
-        ai_message = message = response.choices[0].message.content
-        
-        line_bot_api.reply_message(ReplyMessageRequest(
-            reply_token=reply_token,
-            messages=[TextMessage(text=ai_message)]
+        ai_message = response.choices[0].message["content"]
+
+        # AI応答メッセージをユーザーに送信
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            line_bot_api.reply_message(ReplyMessageRequest(
+                reply_token=reply_token,
+                messages=[TextMessage(text=ai_message)]
+            ))
+
+# 最初にユーザーにメッセージを送信
+def send_initial_message(user_id):
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        initial_message = "名前を教えてください。"
+        line_bot_api.push_message(PushMessageRequest(
+            to=user_id,
+            messages=[TextMessage(text=initial_message)]
         ))
+
 
 if __name__ == "__main__":
     create_table()
