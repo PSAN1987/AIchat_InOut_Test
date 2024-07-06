@@ -164,15 +164,15 @@ def handle_message(event):
             response_message = "勤怠情報が既に保存されています。"
 
         # AI応答を生成し、ユーザーに返信
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create (
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "あなたは役に立つアシスタントです。"},
+                {"role": "system", "content": "あなたは役に立つアシスタントです。今日の業務の議論について集中してください。"},
                 {"role": "user", "content": user_message}
             ]
         )
         
-        ai_message = response.choices[0].message['content']
+        ai_message = message = response.choices[0].message.content
         
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=reply_token,
