@@ -124,22 +124,34 @@ employee_data = {
     "日時": None
 }
 
+# 最初にユーザーにメッセージを送信
+def send_initial_message(reply_token):
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        initial_message = "名前を教えてください。"
+        line_bot_api.reply_message(ReplyMessageRequest(
+            reply_token=reply_token,
+            messages=[TextMessage(text=initial_message)]
+        ))
+
 # メッセージ受信時の処理
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
+    user_message = event.message.text
+    reply_token = event.reply_token
+
+    # 勤怠情報がまだ未入力の場合は初期メッセージを送信
+    if employee_data["名前"] is None:
+        send_initial_message(reply_token)
+        employee_data["名前"] = user_message
+        return
+
     # APIクライアントのインスタンス化
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
 
-        user_message = event.message.text
-        reply_token = event.reply_token
-
         # 勤怠情報収集ロジック
-        if employee_data["名前"] is None:
-            employee_data["名前"] = user_message
-            response_message = "出勤時間を教えてください（例：09:00）。"
-        
-        elif employee_data["出勤時間"] is None:
+        if employee_data["出勤時間"] is None:
             try:
                 current_date = datetime.now().strftime("%Y-%m-%d")
                 employee_data["出勤時間"] = datetime.strptime(f"{current_date} {user_message}", "%Y-%m-%d %H:%M")
@@ -211,15 +223,6 @@ def handle_ai_message(event):
                 messages=[TextMessage(text=ai_message)]
             ))
 
-# 最初にユーザーにメッセージを送信
-def send_initial_message(user_id):
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        initial_message = "名前を教えてください。"
-        line_bot_api.push_message(PushMessageRequest(
-            to=user_id,
-            messages=[TextMessage(text=initial_message)]
-        ))
 
 
 if __name__ == "__main__":
