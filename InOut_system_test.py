@@ -35,12 +35,12 @@ handler = WebhookHandler(CHANNEL_SECRET)
 
 # Function to get response from OpenAI API
 def get_chat_response(prompt, model="gpt-4"):
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create (
         model=model,
         messages=[{"role": "system", "content": "You are a helpful assistant."},
                   {"role": "user", "content": prompt}]
     )
-    return response.choices[0].message['content']
+    return  response.choices[0].message.content
 
 # Create table if not exists
 def create_table():
@@ -167,7 +167,7 @@ def handle_message(event):
 
 if __name__ == "__main__":
     create_table()
-    app.run()
+    app.run(debug=True, host='0.0.0.0', port=5000)
     
     # Top page for checking if the bot is running
 @app.route('/', methods=['GET'])
