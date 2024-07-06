@@ -38,7 +38,7 @@ def get_chat_response(prompt, model="gpt-4"):
     response = openai.chat.completions.create (
         model=model,
         messages=[{"role": "system", "content": "You are a helpful assistant."},
-                  {"role": "user", "content": prompt}]
+                  {"role": "user", "content": received_message}]
     )
     return  response.choices[0].message.content
 
@@ -121,33 +121,32 @@ def handle_message(event):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
 
-        user_message = event.message.text
-        reply_token = event.reply_token
+        received_message = event.message.text
 
         if employee_data["名前"] is None:
-            employee_data["名前"] = user_message
+            employee_data["名前"] = received_message
             response_message = "出勤時間を教えてください（例：09:00）。"
         
         elif employee_data["出勤時間"] is None:
             try:
-                employee_data["出勤時間"] = datetime.strptime(user_message, "%H:%M")
+                employee_data["出勤時間"] = datetime.strptime(received_message, "%H:%M")
                 response_message = "退勤時間を教えてください（例：18:00）。"
             except ValueError:
                 response_message = "時間の形式が正しくありません。再度入力してください。出勤時間を教えてください（例：09:00）。"
 
         elif employee_data["退勤時間"] is None:
             try:
-                employee_data["退勤時間"] = datetime.strptime(user_message, "%H:%M")
+                employee_data["退勤時間"] = datetime.strptime(received_message, "%H:%M")
                 response_message = "休憩時間を教えてください（例：1時間）。"
             except ValueError:
                 response_message = "時間の形式が正しくありません。再度入力してください。退勤時間を教えてください（例：18:00）。"
 
         elif employee_data["休憩時間"] is None:
-            employee_data["休憩時間"] = user_message
+            employee_data["休憩時間"] = received_message
             response_message = "今日の業務内容を教えてください。"
         
         elif employee_data["業務内容サマリ"] is None:
-            employee_data["業務内容サマリ"] = user_message
+            employee_data["業務内容サマリ"] = received_message
             current_date = datetime.now()
             employee_data["日時"] = current_date.strftime("%Y-%m-%d %H:%M:%S")
             save_to_database(employee_data)
@@ -165,10 +164,6 @@ def handle_message(event):
             messages=[TextMessage(text=response_message)]
         ))
 
-if __name__ == "__main__":
-    create_table()
-    app.run(debug=True, host='0.0.0.0', port=5000)
-    
     # Top page for checking if the bot is running
 @app.route('/', methods=['GET'])
 def toppage():
