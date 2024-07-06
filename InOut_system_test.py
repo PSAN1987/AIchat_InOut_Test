@@ -178,8 +178,12 @@ def handle_message(event):
         # 勤怠情報収集メッセージをユーザーに返信
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=reply_token,
-            messages=[TextMessage(text=response_message)]
-        ))
+            messages=[TextMessage(text=response_message)]  
+        except Exception as e:
+        # エラーハンドリング
+        print(f"Error: {e}")
+        line_bot_api.reply_message(reply_token, TextSendMessage(text="エラーが発生しました。もう一度お試しください。"))
+
 
 # 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -201,7 +205,6 @@ def send_initial_message(reply_token):
             reply_token=reply_token,
             messages=[TextMessage(text=initial_message)]
         ))
-
 
 # AI応答を処理する別のハンドラを追加
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -227,7 +230,6 @@ def handle_ai_message(event):
                 reply_token=reply_token,
                 messages=[TextMessage(text=ai_message)]
             ))
-
 
 
 if __name__ == "__main__":
