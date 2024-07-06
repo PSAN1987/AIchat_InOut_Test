@@ -121,53 +121,52 @@ def handle_message(event):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
 
-        user_message = event.message.text
+        received_message = event.message.text
         reply_token = event.reply_token
 
         if employee_data["名前"] is None:
-            employee_data["名前"] = user_message
-            response_message = "出勤時間を教えてください（例：09:00）。"
+            employee_data["名前"] = received_message
+            replay = "出勤時間を教えてください（例：09:00）。"
         
         elif employee_data["出勤時間"] is None:
             try:
                 current_date = datetime.now().strftime("%Y-%m-%d")
-                employee_data["出勤時間"] = datetime.strptime(f"{current_date} {user_message}", "%Y-%m-%d %H:%M")
-                response_message = "退勤時間を教えてください（例：18:00）。"
+                employee_data["出勤時間"] = datetime.strptime(f"{current_date} {received_message}", "%Y-%m-%d %H:%M")
+                replay = "退勤時間を教えてください（例：18:00）。"
             except ValueError:
-                response_message = "時間の形式が正しくありません。再度入力してください。出勤時間を教えてください（例：09:00）。"
+                replay = "時間の形式が正しくありません。再度入力してください。出勤時間を教えてください（例：09:00）。"
 
         elif employee_data["退勤時間"] is None:
             try:
                 current_date = datetime.now().strftime("%Y-%m-%d")
-                employee_data["退勤時間"] = datetime.strptime(f"{current_date} {user_message}", "%Y-%m-%d %H:%M")
-                response_message = "休憩時間を教えてください（例：1時間）。"
+                employee_data["退勤時間"] = datetime.strptime(f"{current_date} {received_message}", "%Y-%m-%d %H:%M")
+                replay = "休憩時間を教えてください（例：1時間）。"
             except ValueError:
-                response_message = "時間の形式が正しくありません。再度入力してください。退勤時間を教えてください（例：18:00）。"
+                replay = "時間の形式が正しくありません。再度入力してください。退勤時間を教えてください（例：18:00）。"
 
         elif employee_data["休憩時間"] is None:
-            employee_data["休憩時間"] = user_message
-            response_message = "今日の業務内容を教えてください。"
+            employee_data["休憩時間"] = received_message
+            replay = "今日の業務内容を教えてください。"
         
         elif employee_data["業務内容サマリ"] is None:
-            employee_data["業務内容サマリ"] = user_message
+            employee_data["業務内容サマリ"] = received_message
             current_date = datetime.now()
             employee_data["日時"] = current_date.strftime("%Y-%m-%d %H:%M:%S")
             save_to_database(employee_data)
-            response_message = "勤怠情報を保存しました。ありがとうございました。"
+            replay = "勤怠情報を保存しました。ありがとうございました。"
 
             # 次のユーザーのためにemployee_dataをリセット
             for key in employee_data.keys():
                 employee_data[key] = None
 
         else:
-            response_message = "勤怠情報が既に保存されています。"
+            replay = "勤怠情報が既に保存されています。"
 
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=reply_token,
-            messages=[TextMessage(text=response_message)]
+            messages=[TextMessage(text=replay)]
         ))
 
 if __name__ == "__main__":
     create_table()
     app.run(debug=True, host='0.0.0.0', port=5000)
-
