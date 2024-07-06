@@ -124,41 +124,27 @@ employee_data = {
     "日時": None
 }
 
-# 最初にユーザーにメッセージを送信
-def send_initial_message(reply_token):
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        initial_message = "名前を教えてください。"
-        line_bot_api.reply_message(ReplyMessageRequest(
-            reply_token=reply_token,
-            messages=[TextMessage(text=initial_message)]
-        ))
-
 # メッセージ受信時の処理
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     user_message = event.message.text
     reply_token = event.reply_token
 
-    # 勤怠情報がまだ未入力の場合は初期メッセージを送信
-    if employee_data["名前"] is None:
-        send_initial_message(reply_token)
-        employee_data["名前"] = user_message
-        return
-
     # APIクライアントのインスタンス化
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
 
         # 勤怠情報収集ロジック
-        if employee_data["出勤時間"] is None:
+        if employee_data["名前"] is None:
+            employee_data["名前"] = user_message
+            response_message = "出勤時間を教えてください（例：09:00）。"
+        elif employee_data["出勤時間"] is None:
             try:
                 current_date = datetime.now().strftime("%Y-%m-%d")
                 employee_data["出勤時間"] = datetime.strptime(f"{current_date} {user_message}", "%Y-%m-%d %H:%M")
                 response_message = "退勤時間を教えてください（例：18:00）。"
             except ValueError:
                 response_message = "時間の形式が正しくありません。再度入力してください。出勤時間を教えてください（例：09:00）。"
-
         elif employee_data["退勤時間"] is None:
             try:
                 current_date = datetime.now().strftime("%Y-%m-%d")
@@ -166,11 +152,9 @@ def handle_message(event):
                 response_message = "休憩時間を教えてください（例：1時間）。"
             except ValueError:
                 response_message = "時間の形式が正しくありません。再度入力してください。退勤時間を教えてください（例：18:00）。"
-
         elif employee_data["休憩時間"] is None:
             employee_data["休憩時間"] = user_message
             response_message = "今日の業務内容を教えてください。"
-        
         elif employee_data["業務内容サマリ"] is None:
             employee_data["業務内容サマリ"] = user_message
             current_date = datetime.now()
@@ -188,7 +172,6 @@ def handle_message(event):
                 messages=[TextMessage(text=response_message)]
             ))
             return
-
         else:
             response_message = "勤怠情報が既に保存されています。"
 
@@ -197,6 +180,28 @@ def handle_message(event):
             reply_token=reply_token,
             messages=[TextMessage(text=response_message)]
         ))
+
+# 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
+@handler.add(MessageEvent, message=TextMessageContent)
+def start_attendance_collection(event):
+    reply_token = event.reply_token
+    user_message = event.message.text
+
+    if employee_data["名前"] is None:
+        send_initial_message(reply_token)
+    else:
+        handle_message(event)
+
+# 初回メッセージ送信
+def send_initial_message(reply_token):
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        initial_message = "名前を教えてください。"
+        line_bot_api.reply_message(ReplyMessageRequest(
+            reply_token=reply_token,
+            messages=[TextMessage(text=initial_message)]
+        ))
+
 
 # AI応答を処理する別のハンドラを追加
 @handler.add(MessageEvent, message=TextMessageContent)
