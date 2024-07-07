@@ -82,25 +82,28 @@ def handle_step(user_message):
     global current_step, employee_data
     app.logger.info(f"Handling step: {current_step} with message: {user_message}")
 
-    if current_step == "名前":
+    if current_step == "start":
+        current_step = "名前"
+    elif current_step == "名前":
         employee_data["名前"] = user_message
-        current_step = "勤務日"
+        current_step = "勤務日" if employee_data["名前"] else "名前"
     elif current_step == "勤務日":
         employee_data["勤務日"] = user_message
-        current_step = "出勤時間"
+        current_step = "出勤時間" if employee_data["勤務日"] else "勤務日"
     elif current_step == "出勤時間":
         employee_data["出勤時間"] = user_message
-        current_step = "退勤時間"
+        current_step = "退勤時間" if employee_data["出勤時間"] else "出勤時間"
     elif current_step == "退勤時間":
         employee_data["退勤時間"] = user_message
-        current_step = "休憩時間"
+        current_step = "休憩時間" if employee_data["退勤時間"] else "退勤時間"
     elif current_step == "休憩時間":
         employee_data["休憩時間"] = user_message
-        current_step = "業務内容サマリ"
+        current_step = "業務内容サマリ" if employee_data["休憩時間"] else "休憩時間"
     elif current_step == "業務内容サマリ":
         employee_data["業務内容サマリ"] = user_message
-        save_to_database(employee_data)
-        current_step = "completed"
+        if employee_data["業務内容サマリ"]:
+            save_to_database(employee_data)
+            current_step = "completed"
     app.logger.info(f"Updated step: {current_step}")
 
 # 各ステップごとに適切な質問を送信する関数
@@ -111,21 +114,21 @@ def ask_next_question(reply_token):
 
         if current_step == "start":
             response_message = "こんにちは！まず、あなたの名前を教えてください。"
-            current_step = "名前"
         elif current_step == "名前":
-            response_message = "いつの勤務日のデータを入力しますか？ (例: 2024-07-07)"
+            response_message = "名前を教えてください。"
         elif current_step == "勤務日":
-            response_message = "出勤時間を教えてください。 (例: 09:00)"
+            response_message = "いつの勤務日のデータを入力しますか？ (例: 2024-07-07)"
         elif current_step == "出勤時間":
-            response_message = "退勤時間を教えてください。 (例: 18:00)"
+            response_message = "出勤時間を教えてください。 (例: 09:00)"
         elif current_step == "退勤時間":
-            response_message = "休憩時間を教えてください。 (例: 1時間)"
+            response_message = "退勤時間を教えてください。 (例: 18:00)"
         elif current_step == "休憩時間":
+            response_message = "休憩時間を教えてください。 (例: 1時間)"
+        elif current_step == "業務内容サマリ":
             response_message = "業務内容サマリを教えてください。"
         elif current_step == "completed":
             response_message = "データが保存されました。ありがとうございます。"
             current_step = "start"
-            employee_data.clear()
             employee_data.update({
                 "名前": None,
                 "勤務日": None,
@@ -151,9 +154,7 @@ def handle_message(event):
     app.logger.info(f"Current employee_data: {employee_data}")
     app.logger.info(f"Current step: {current_step}")
 
-    if current_step != "start":
-        handle_step(user_message)
-
+    handle_step(user_message)
     ask_next_question(reply_token)
 
 # トップページ
@@ -182,4 +183,5 @@ def callback():
 if __name__ == "__main__":
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
