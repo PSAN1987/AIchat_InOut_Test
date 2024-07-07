@@ -35,7 +35,7 @@ configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
 # テーブルを作成する関数
-def create_table():
+//def create_table():
     conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
     cursor.execute('''
@@ -54,7 +54,7 @@ def create_table():
     conn.close()
 
 # 従業員データをデータベースに保存する関数
-def save_to_database(employee_data):
+//def save_to_database(employee_data):
     conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
     cursor.execute('''
@@ -123,64 +123,6 @@ employee_data = {
     "業務内容サマリ": None,
     "日時": None
 }
-
-# メッセージ受信時の処理
-@handler.add(MessageEvent, message=TextMessageContent)
-def handle_message(event):
-    user_message = event.message.text
-    reply_token = event.reply_token
-
-    # APIクライアントのインスタンス化
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-
-        # 勤怠情報収集ロジック
-        if employee_data["名前"] is None:
-            employee_data["名前"] = user_message
-            response_message = "出勤時間を教えてください（例：09:00）。"
-        elif employee_data["出勤時間"] is None:
-            try:
-                current_date = datetime.now().strftime("%Y-%m-%d")
-                employee_data["出勤時間"] = datetime.strptime(f"{current_date} {user_message}", "%Y-%m-%d %H:%M")
-                response_message = "退勤時間を教えてください（例：18:00）。"
-            except ValueError:
-                response_message = "時間の形式が正しくありません。再度入力してください。出勤時間を教えてください（例：09:00）。"
-        elif employee_data["退勤時間"] is None:
-            try:
-                current_date = datetime.now().strftime("%Y-%m-%d")
-                employee_data["退勤時間"] = datetime.strptime(f"{current_date} {user_message}", "%Y-%m-%d %H:%M")
-                response_message = "休憩時間を教えてください（例：1時間）。"
-            except ValueError:
-                response_message = "時間の形式が正しくありません。再度入力してください。退勤時間を教えてください（例：18:00）。"
-        elif employee_data["休憩時間"] is None:
-            employee_data["休憩時間"] = user_message
-            response_message = "今日の業務内容を教えてください。"
-        elif employee_data["業務内容サマリ"] is None:
-            employee_data["業務内容サマリ"] = user_message
-            current_date = datetime.now()
-            employee_data["日時"] = current_date.strftime("%Y-%m-%d %H:%M:%S")
-            save_to_database(employee_data)
-            response_message = "勤怠情報を保存しました。ありがとうございました。次に、今日の業務についてお話しましょう。"
-
-            # 勤怠情報が保存されたらリセット
-            for key in employee_data.keys():
-                employee_data[key] = None
-
-            # 勤怠情報保存メッセージをユーザーに送信
-            line_bot_api.reply_message(ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[TextMessage(text=response_message)]
-            ))
-            return
-        else:
-            response_message = "勤怠情報が既に保存されています。"
-
-        # 勤怠情報収集メッセージをユーザーに返信
-        line_bot_api.reply_message(ReplyMessageRequest(
-            reply_token=reply_token,
-            messages=[TextMessage(text=response_message)]  
-        ))
-
 
 # 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
 @handler.add(MessageEvent, message=TextMessageContent)
