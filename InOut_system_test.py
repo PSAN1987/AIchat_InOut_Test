@@ -11,7 +11,7 @@ from linebot.v3.messaging import (
     ReplyMessageRequest, TextMessage
 )
 from linebot.v3.webhooks import (
-    FollowEvent, MessageEvent, TextMessageContent
+    MessageEvent, TextMessageContent
 )
 
 # .envファイルを読み込む
@@ -38,7 +38,7 @@ employee_data = {
     "休憩時間": None,
     "業務内容サマリ": None
 }
-current_step = "初期"  # 初期ステップを設定
+current_step = "start"  # 初期ステップを設定
 
 # テーブルを作成する関数
 def create_table():
@@ -84,7 +84,7 @@ def ask_next_question(reply_token):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         
-        if current_step == "初期":
+        if current_step == "start":
             response_message = "こんにちは！まず、あなたの名前を教えてください。"
         elif current_step == "名前":
             response_message = "いつの勤務日のデータを入力しますか？ (例: 2024-07-07)"
@@ -111,8 +111,9 @@ def handle_message(event):
 
     app.logger.info(f"Received message: {user_message}")
     app.logger.info(f"Current employee_data: {employee_data}")
+    app.logger.info(f"Current step: {current_step}")
 
-    if current_step == "初期":
+    if current_step == "start":
         current_step = "名前"
         ask_next_question(reply_token)
         return
@@ -120,47 +121,14 @@ def handle_message(event):
         employee_data["名前"] = user_message
         current_step = "勤務日"
     elif current_step == "勤務日":
-        try:
-            datetime.strptime(user_message, "%Y-%m-%d")
-            employee_data["勤務日"] = user_message
-            current_step = "出勤時間"
-        except ValueError:
-            response_message = "正しいフォーマットで勤務日を入力してください。 (例: 2024-07-07)"
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[TextMessage(text=response_message)]
-                ))
-            return
+        employee_data["勤務日"] = user_message
+        current_step = "出勤時間"
     elif current_step == "出勤時間":
-        try:
-            datetime.strptime(user_message, "%H:%M")
-            employee_data["出勤時間"] = user_message
-            current_step = "退勤時間"
-        except ValueError:
-            response_message = "正しいフォーマットで出勤時間を入力してください。 (例: 09:00)"
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[TextMessage(text=response_message)]
-                ))
-            return
+        employee_data["出勤時間"] = user_message
+        current_step = "退勤時間"
     elif current_step == "退勤時間":
-        try:
-            datetime.strptime(user_message, "%H:%M")
-            employee_data["退勤時間"] = user_message
-            current_step = "休憩時間"
-        except ValueError:
-            response_message = "正しいフォーマットで退勤時間を入力してください。 (例: 18:00)"
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[TextMessage(text=response_message)]
-                ))
-            return
+        employee_data["退勤時間"] = user_message
+        current_step = "休憩時間"
     elif current_step == "休憩時間":
         employee_data["休憩時間"] = user_message
         current_step = "業務内容サマリ"
@@ -171,7 +139,7 @@ def handle_message(event):
 
         # Reset employee_data and current_step for the next interaction
         employee_data = {key: None for key in employee_data}
-        current_step = "初期"
+        current_step = "start"
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             line_bot_api.reply_message(ReplyMessageRequest(
