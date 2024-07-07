@@ -21,11 +21,7 @@ load_dotenv()
 # 環境変数の設定
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 DATABASE_URL = os.getenv('DATABASE_URL')
-
-# OpenAIのAPIキーを設定します
-openai.api_key = OPENAI_API_KEY
 
 # Flaskアプリのインスタンス化
 app = Flask(__name__)
@@ -142,33 +138,6 @@ def handle_message(event, user_message):
             reply_token=reply_token,
             messages=[TextMessage(text=response_message)]
         ))
-
-# AI応答を処理する別のハンドラを追加
-@handler.add(MessageEvent, message=TextMessageContent)
-def handle_ai_message(event):
-    global employee_data
-    if all(value is not None for value in employee_data.values()):
-        received_message = event.message.text
-        reply_token = event.reply_token
-
-        # AI応答を生成
-        response = openai.chat.completions.create (
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "あなたは役に立つアシスタントです。今日の業務の議論について集中してください。"},
-                {"role": "user", "content": received_message}
-            ]
-        )
-        ai_message = response.choices[0].message.content
-
-        app.logger.info(f"Sending AI message: {ai_message}")
-        # AI応答メッセージをユーザーに送信
-        with ApiClient(configuration) as api_client:
-            line_bot_api = MessagingApi(api_client)
-            line_bot_api.reply_message(ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[TextMessage(text=ai_message)]
-            ))
 
 # トップページ
 @app.route('/', methods=['GET'])
