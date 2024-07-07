@@ -86,22 +86,16 @@ def ask_next_question(reply_token):
         
         if current_step == "初期":
             response_message = "こんにちは！まず、あなたの名前を教えてください。"
-            current_step = "名前"
         elif current_step == "名前":
             response_message = "いつの勤務日のデータを入力しますか？ (例: 2024-07-07)"
-            current_step = "勤務日"
         elif current_step == "勤務日":
             response_message = "出勤時間を教えてください。 (例: 09:00)"
-            current_step = "出勤時間"
         elif current_step == "出勤時間":
             response_message = "退勤時間を教えてください。 (例: 18:00)"
-            current_step = "退勤時間"
         elif current_step == "退勤時間":
             response_message = "休憩時間を教えてください。 (例: 1時間)"
-            current_step = "休憩時間"
         elif current_step == "休憩時間":
             response_message = "業務内容サマリを教えてください。"
-            current_step = "業務内容サマリ"
         
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=reply_token,
@@ -119,6 +113,7 @@ def handle_message(event):
     app.logger.info(f"Current employee_data: {employee_data}")
 
     if current_step == "初期":
+        current_step = "名前"
         ask_next_question(reply_token)
         return
     elif current_step == "名前":
