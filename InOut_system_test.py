@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import openai
 import os
 import psycopg2
 from dotenv import load_dotenv
@@ -86,27 +85,7 @@ def start_attendance_collection(event):
     user_message = event.message.text
 
     app.logger.info(f"Received message: {user_message}")
-
-    if employee_data["名前"] is None:
-        send_initial_message(reply_token)
-    else:
-        handle_message(event, user_message)
-
-# 初回メッセージ送信
-def send_initial_message(reply_token):
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        initial_message = "名前を教えてください。"
-        app.logger.info("Sending initial message for name.")
-        line_bot_api.reply_message(ReplyMessageRequest(
-            reply_token=reply_token,
-            messages=[TextMessage(text=initial_message)]
-        ))
-
-# ユーザーのメッセージを処理してデータを更新
-def handle_message(event, user_message):
-    global employee_data
-    reply_token = event.reply_token
+    app.logger.info(f"Current employee_data: {employee_data}")
 
     if employee_data["名前"] is None:
         employee_data["名前"] = user_message
@@ -165,6 +144,7 @@ def callback():
 if __name__ == "__main__":
     create_table()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
