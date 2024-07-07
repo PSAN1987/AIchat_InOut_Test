@@ -2,7 +2,6 @@
 import os
 import psycopg2
 from dotenv import load_dotenv
-from datetime import datetime
 from flask import Flask, request, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
@@ -83,41 +82,36 @@ def ask_next_question(reply_token):
     global current_step
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
-        
+
         if current_step == "start":
             response_message = "こんにちは！まず、あなたの名前を教えてください。"
+            current_step = "名前"
         elif current_step == "名前":
             response_message = "いつの勤務日のデータを入力しますか？ (例: 2024-07-07)"
+            current_step = "勤務日"
         elif current_step == "勤務日":
             response_message = "出勤時間を教えてください。 (例: 09:00)"
+            current_step = "出勤時間"
         elif current_step == "出勤時間":
             response_message = "退勤時間を教えてください。 (例: 18:00)"
+            current_step = "退勤時間"
         elif current_step == "退勤時間":
             response_message = "休憩時間を教えてください。 (例: 1時間)"
+            current_step = "休憩時間"
         elif current_step == "休憩時間":
             response_message = "業務内容サマリを教えてください。"
-        
+            current_step = "業務内容サマリ"
+
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=reply_token,
             messages=[TextMessage(text=response_message)]
         ))
 
-# 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
-@handler.add(MessageEvent, message=TextMessageContent)
-def handle_message(event):
-    global employee_data, current_step
-    reply_token = event.reply_token
-    user_message = event.message.text.strip()
+# ステップを管理する関数
+def handle_step(user_message):
+    global current_step, employee_data
 
-    app.logger.info(f"Received message: {user_message}")
-    app.logger.info(f"Current employee_data: {employee_data}")
-    app.logger.info(f"Current step: {current_step}")
-
-    if current_step == "start":
-        current_step = "名前"
-        ask_next_question(reply_token)
-        return
-    elif current_step == "名前":
+    if current_step == "名前":
         employee_data["名前"] = user_message
         current_step = "勤務日"
     elif current_step == "勤務日":
@@ -135,10 +129,24 @@ def handle_message(event):
     elif current_step == "業務内容サマリ":
         employee_data["業務内容サマリ"] = user_message
         save_to_database(employee_data)
-        response_message = "データが保存されました。ありがとうございます。"
+        current_step = "completed"
 
-        # Reset employee_data and current_step for the next interaction
-        employee_data = {key: None for key in employee_data}
+# 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
+@handler.add(MessageEvent, message=TextMessageContent)
+def handle_message(event):
+    global current_step
+    reply_token = event.reply_token
+    user_message = event.message.text.strip()
+
+    app.logger.info(f"Received message: {user_message}")
+    app.logger.info(f"Current employee_data: {employee_data}")
+    app.logger.info(f"Current step: {current_step}")
+
+    handle_step(user_message)
+
+    if current_step == "completed":
+        response_message = "データが保存されました。ありがとうございます。"
+        employee_data.clear()
         current_step = "start"
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
@@ -146,9 +154,8 @@ def handle_message(event):
                 reply_token=reply_token,
                 messages=[TextMessage(text=response_message)]
             ))
-        return
-
-    ask_next_question(reply_token)
+    else:
+        ask_next_question(reply_token)
 
 # トップページ
 @app.route('/', methods=['GET'])
