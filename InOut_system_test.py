@@ -92,13 +92,19 @@ def start_attendance_collection(event):
         response_message = "日時を教えてください。"
     elif employee_data["日時"] is None:
         employee_data["日時"] = user_message
-        response_message = "出勤時間を教えてください。"
+        response_message = "出勤時間を教えてください。 (例: 09:00)"
     elif employee_data["出勤時間"] is None:
-        employee_data["出勤時間"] = datetime.strptime(user_message, "%Y-%m-%d %H:%M:%S")
-        response_message = "退勤時間を教えてください。"
+        try:
+            employee_data["出勤時間"] = datetime.strptime(employee_data["日時"] + " " + user_message, "%Y-%m-%d %H:%M")
+            response_message = "退勤時間を教えてください。 (例: 18:00)"
+        except ValueError:
+            response_message = "正しいフォーマットで出勤時間を入力してください。 (例: 09:00)"
     elif employee_data["退勤時間"] is None:
-        employee_data["退勤時間"] = datetime.strptime(user_message, "%Y-%m-%d %H:%M:%S")
-        response_message = "休憩時間を教えてください。"
+        try:
+            employee_data["退勤時間"] = datetime.strptime(employee_data["日時"] + " " + user_message, "%Y-%m-%d %H:%M")
+            response_message = "休憩時間を教えてください。"
+        except ValueError:
+            response_message = "正しいフォーマットで退勤時間を入力してください。 (例: 18:00)"
     elif employee_data["休憩時間"] is None:
         employee_data["休憩時間"] = user_message
         response_message = "業務内容サマリを教えてください。"
@@ -144,6 +150,7 @@ def callback():
 if __name__ == "__main__":
     create_table()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
