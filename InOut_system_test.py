@@ -125,10 +125,12 @@ def handle_message(event):
         return
     elif current_step == "名前":
         employee_data["名前"] = user_message
+        current_step = "勤務日"
     elif current_step == "勤務日":
         try:
             datetime.strptime(user_message, "%Y-%m-%d")
             employee_data["勤務日"] = user_message
+            current_step = "出勤時間"
         except ValueError:
             response_message = "正しいフォーマットで勤務日を入力してください。 (例: 2024-07-07)"
             with ApiClient(configuration) as api_client:
@@ -142,6 +144,7 @@ def handle_message(event):
         try:
             datetime.strptime(user_message, "%H:%M")
             employee_data["出勤時間"] = user_message
+            current_step = "退勤時間"
         except ValueError:
             response_message = "正しいフォーマットで出勤時間を入力してください。 (例: 09:00)"
             with ApiClient(configuration) as api_client:
@@ -155,6 +158,7 @@ def handle_message(event):
         try:
             datetime.strptime(user_message, "%H:%M")
             employee_data["退勤時間"] = user_message
+            current_step = "休憩時間"
         except ValueError:
             response_message = "正しいフォーマットで退勤時間を入力してください。 (例: 18:00)"
             with ApiClient(configuration) as api_client:
@@ -166,6 +170,7 @@ def handle_message(event):
             return
     elif current_step == "休憩時間":
         employee_data["休憩時間"] = user_message
+        current_step = "業務内容サマリ"
     elif current_step == "業務内容サマリ":
         employee_data["業務内容サマリ"] = user_message
         save_to_database(employee_data)
@@ -210,12 +215,3 @@ def callback():
 if __name__ == "__main__":
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
-
-
-
-
-
-
-
-
-
