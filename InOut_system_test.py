@@ -89,19 +89,58 @@ def start_attendance_collection(event):
     reply_token = event.reply_token
     user_message = event.message.text
 
+    app.logger.info(f"Received message: {user_message}")
+
     if employee_data["名前"] is None:
         send_initial_message(reply_token)
     else:
-        handle_message(event)
+        handle_message(event, user_message)
 
 # 初回メッセージ送信
 def send_initial_message(reply_token):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         initial_message = "名前を教えてください。"
+        app.logger.info("Sending initial message for name.")
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=reply_token,
             messages=[TextMessage(text=initial_message)]
+        ))
+
+# ユーザーのメッセージを処理してデータを更新
+def handle_message(event, user_message):
+    global employee_data
+    reply_token = event.reply_token
+
+    if employee_data["名前"] is None:
+        employee_data["名前"] = user_message
+        response_message = "日時を教えてください。"
+    elif employee_data["日時"] is None:
+        employee_data["日時"] = user_message
+        response_message = "出勤時間を教えてください。"
+    elif employee_data["出勤時間"] is None:
+        employee_data["出勤時間"] = datetime.strptime(user_message, "%Y-%m-%d %H:%M:%S")
+        response_message = "退勤時間を教えてください。"
+    elif employee_data["退勤時間"] is None:
+        employee_data["退勤時間"] = datetime.strptime(user_message, "%Y-%m-%d %H:%M:%S")
+        response_message = "休憩時間を教えてください。"
+    elif employee_data["休憩時間"] is None:
+        employee_data["休憩時間"] = user_message
+        response_message = "業務内容サマリを教えてください。"
+    elif employee_data["業務内容サマリ"] is None:
+        employee_data["業務内容サマリ"] = user_message
+        save_to_database(employee_data)
+        response_message = "データが保存されました。ありがとうございます。"
+
+        # Reset employee_data for the next interaction
+        employee_data = {key: None for key in employee_data}
+
+    app.logger.info(f"Sending message: {response_message}")
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_api.reply_message(ReplyMessageRequest(
+            reply_token=reply_token,
+            messages=[TextMessage(text=response_message)]
         ))
 
 # AI応答を処理する別のハンドラを追加
@@ -122,6 +161,7 @@ def handle_ai_message(event):
         )
         ai_message = response.choices[0].message.content
 
+        app.logger.info(f"Sending AI message: {ai_message}")
         # AI応答メッセージをユーザーに送信
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
