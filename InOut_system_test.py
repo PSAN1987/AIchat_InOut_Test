@@ -31,7 +31,6 @@ handler = WebhookHandler(CHANNEL_SECRET)
 
 # グローバル変数としてemployee_dataを初期化
 employee_data = {
-    "ステップ": None,
     "名前": None,
     "勤務日": None,
     "出勤時間": None,
@@ -39,7 +38,7 @@ employee_data = {
     "休憩時間": None,
     "業務内容サマリ": None
 }
-current_step = "ステップ"  # 現在のステップをトラックする変数
+current_step = "初期"  # 初期ステップを設定
 
 # テーブルを作成する関数
 def create_table():
@@ -85,7 +84,7 @@ def ask_next_question(reply_token):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         
-        if current_step == "ステップ":
+        if current_step == "初期":
             response_message = "こんにちは！まず、あなたの名前を教えてください。"
             current_step = "名前"
         elif current_step == "名前":
@@ -119,8 +118,7 @@ def handle_message(event):
     app.logger.info(f"Received message: {user_message}")
     app.logger.info(f"Current employee_data: {employee_data}")
 
-    if current_step == "ステップ":
-        current_step = "名前"
+    if current_step == "初期":
         ask_next_question(reply_token)
         return
     elif current_step == "名前":
@@ -178,7 +176,7 @@ def handle_message(event):
 
         # Reset employee_data and current_step for the next interaction
         employee_data = {key: None for key in employee_data}
-        current_step = "ステップ"
+        current_step = "初期"
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             line_bot_api.reply_message(ReplyMessageRequest(
