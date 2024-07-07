@@ -34,6 +34,16 @@ app = Flask(__name__)
 configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
+# グローバル変数としてemployee_dataを初期化
+employee_data = {
+    "名前": None,
+    "日時": None,
+    "出勤時間": None,
+    "退勤時間": None,
+    "休憩時間": None,
+    "業務内容サマリ": None
+}
+
 # テーブルを作成する関数
 def create_table():
     conn = psycopg2.connect(DATABASE_URL)
@@ -75,6 +85,7 @@ def save_to_database(employee_data):
 # 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
 @handler.add(MessageEvent, message=TextMessageContent)
 def start_attendance_collection(event):
+    global employee_data
     reply_token = event.reply_token
     user_message = event.message.text
 
@@ -96,12 +107,13 @@ def send_initial_message(reply_token):
 # AI応答を処理する別のハンドラを追加
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_ai_message(event):
+    global employee_data
     if all(value is not None for value in employee_data.values()):
         received_message = event.message.text
         reply_token = event.reply_token
 
         # AI応答を生成
-        response = openai.chat_completions.create(
+        response = openai.chat.completions.create (
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "あなたは役に立つアシスタントです。今日の業務の議論について集中してください。"},
@@ -144,6 +156,7 @@ def callback():
 if __name__ == "__main__":
     create_table()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
