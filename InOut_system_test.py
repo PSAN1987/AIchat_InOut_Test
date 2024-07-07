@@ -38,6 +38,7 @@ employee_data = {
     "休憩時間": None,
     "業務内容サマリ": None
 }
+current_step = "名前"  # 現在のステップをトラックする変数
 
 # テーブルを作成する関数
 def create_table():
@@ -68,8 +69,8 @@ def save_to_database(employee_data):
     ''', (
         employee_data["名前"],
         employee_data["日時"],
-        employee_data["出勤時間"].strftime("%Y-%m-%d %H:%M:%S"),
-        employee_data["退勤時間"].strftime("%Y-%m-%d %H:%M:%S"),
+        employee_data["出勤時間"],
+        employee_data["退勤時間"],
         employee_data["休憩時間"],
         employee_data["業務内容サマリ"]
     ))
@@ -79,45 +80,51 @@ def save_to_database(employee_data):
 
 # 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
 @handler.add(MessageEvent, message=TextMessageContent)
-def start_attendance_collection(event):
-    global employee_data
+def handle_message(event):
+    global employee_data, current_step
     reply_token = event.reply_token
     user_message = event.message.text
 
     app.logger.info(f"Received message: {user_message}")
     app.logger.info(f"Current employee_data: {employee_data}")
 
-    if employee_data["名前"] is None:
-        response_message = "こんにちは！まず、あなたの名前を教えてください。"
+    if current_step == "名前":
         employee_data["名前"] = user_message
-    elif employee_data["名前"] is not None and employee_data["日時"] is None:
+        response_message = "日時を教えてください。 (例: 2024-07-07 09:00)"
+        current_step = "日時"
+    elif current_step == "日時":
         try:
-            employee_data["日時"] = datetime.strptime(user_message, "%Y-%m-%d %H:%M")
+            employee_data["日時"] = datetime.strptime(user_message, "%Y-%m-%d %H:%M").strftime("%Y-%m-%d %H:%M")
             response_message = "出勤時間を教えてください。 (例: 09:00)"
+            current_step = "出勤時間"
         except ValueError:
             response_message = "正しいフォーマットで日時を入力してください。 (例: 2024-07-07 09:00)"
-    elif employee_data["出勤時間"] is None:
+    elif current_step == "出勤時間":
         try:
-            employee_data["出勤時間"] = datetime.strptime(employee_data["日時"].strftime("%Y-%m-%d") + " " + user_message, "%H:%M")
+            employee_data["出勤時間"] = datetime.strptime(user_message, "%H:%M").strftime("%H:%M")
             response_message = "退勤時間を教えてください。 (例: 18:00)"
+            current_step = "退勤時間"
         except ValueError:
             response_message = "正しいフォーマットで出勤時間を入力してください。 (例: 09:00)"
-    elif employee_data["退勤時間"] is None:
+    elif current_step == "退勤時間":
         try:
-            employee_data["退勤時間"] = datetime.strptime(employee_data["日時"].strftime("%Y-%m-%d") + " " + user_message, "%H:%M")
+            employee_data["退勤時間"] = datetime.strptime(user_message, "%H:%M").strftime("%H:%M")
             response_message = "休憩時間を教えてください。"
+            current_step = "休憩時間"
         except ValueError:
             response_message = "正しいフォーマットで退勤時間を入力してください。 (例: 18:00)"
-    elif employee_data["休憩時間"] is None:
+    elif current_step == "休憩時間":
         employee_data["休憩時間"] = user_message
         response_message = "業務内容サマリを教えてください。"
-    elif employee_data["業務内容サマリ"] is None:
+        current_step = "業務内容サマリ"
+    elif current_step == "業務内容サマリ":
         employee_data["業務内容サマリ"] = user_message
         save_to_database(employee_data)
         response_message = "データが保存されました。ありがとうございます。"
 
-        # Reset employee_data for the next interaction
+        # Reset employee_data and current_step for the next interaction
         employee_data = {key: None for key in employee_data}
+        current_step = "名前"
 
     app.logger.info(f"Sending message: {response_message}")
     with ApiClient(configuration) as api_client:
@@ -153,6 +160,8 @@ def callback():
 if __name__ == "__main__":
     create_table()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
+
 
 
 
