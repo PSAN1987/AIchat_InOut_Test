@@ -77,36 +77,6 @@ def save_to_database(employee_data):
     cursor.close()
     conn.close()
 
-# 各ステップごとに適切な質問を送信する関数
-def ask_next_question(reply_token):
-    global current_step
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-
-        if current_step == "start":
-            response_message = "こんにちは！まず、あなたの名前を教えてください。"
-            current_step = "名前"
-        elif current_step == "名前":
-            response_message = "いつの勤務日のデータを入力しますか？ (例: 2024-07-07)"
-            current_step = "勤務日"
-        elif current_step == "勤務日":
-            response_message = "出勤時間を教えてください。 (例: 09:00)"
-            current_step = "出勤時間"
-        elif current_step == "出勤時間":
-            response_message = "退勤時間を教えてください。 (例: 18:00)"
-            current_step = "退勤時間"
-        elif current_step == "退勤時間":
-            response_message = "休憩時間を教えてください。 (例: 1時間)"
-            current_step = "休憩時間"
-        elif current_step == "休憩時間":
-            response_message = "業務内容サマリを教えてください。"
-            current_step = "業務内容サマリ"
-
-        line_bot_api.reply_message(ReplyMessageRequest(
-            reply_token=reply_token,
-            messages=[TextMessage(text=response_message)]
-        ))
-
 # ステップを管理する関数
 def handle_step(user_message):
     global current_step, employee_data
@@ -131,6 +101,43 @@ def handle_step(user_message):
         save_to_database(employee_data)
         current_step = "completed"
 
+# 各ステップごとに適切な質問を送信する関数
+def ask_next_question(reply_token):
+    global current_step
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+
+        if current_step == "start":
+            response_message = "こんにちは！まず、あなたの名前を教えてください。"
+            current_step = "名前"
+        elif current_step == "名前":
+            response_message = "いつの勤務日のデータを入力しますか？ (例: 2024-07-07)"
+        elif current_step == "勤務日":
+            response_message = "出勤時間を教えてください。 (例: 09:00)"
+        elif current_step == "出勤時間":
+            response_message = "退勤時間を教えてください。 (例: 18:00)"
+        elif current_step == "退勤時間":
+            response_message = "休憩時間を教えてください。 (例: 1時間)"
+        elif current_step == "休憩時間":
+            response_message = "業務内容サマリを教えてください。"
+        elif current_step == "completed":
+            response_message = "データが保存されました。ありがとうございます。"
+            current_step = "start"
+            employee_data.clear()
+            employee_data.update({
+                "名前": None,
+                "勤務日": None,
+                "出勤時間": None,
+                "退勤時間": None,
+                "休憩時間": None,
+                "業務内容サマリ": None
+            })
+
+        line_bot_api.reply_message(ReplyMessageRequest(
+            reply_token=reply_token,
+            messages=[TextMessage(text=response_message)]
+        ))
+
 # 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -142,20 +149,10 @@ def handle_message(event):
     app.logger.info(f"Current employee_data: {employee_data}")
     app.logger.info(f"Current step: {current_step}")
 
-    handle_step(user_message)
+    if current_step != "start":
+        handle_step(user_message)
 
-    if current_step == "completed":
-        response_message = "データが保存されました。ありがとうございます。"
-        employee_data.clear()
-        current_step = "start"
-        with ApiClient(configuration) as api_client:
-            line_bot_api = MessagingApi(api_client)
-            line_bot_api.reply_message(ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[TextMessage(text=response_message)]
-            ))
-    else:
-        ask_next_question(reply_token)
+    ask_next_question(reply_token)
 
 # トップページ
 @app.route('/', methods=['GET'])
@@ -183,3 +180,4 @@ def callback():
 if __name__ == "__main__":
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
+
