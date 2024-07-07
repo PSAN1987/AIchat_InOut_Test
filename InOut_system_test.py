@@ -60,22 +60,26 @@ def create_table():
 
 # 従業員データをデータベースに保存する関数
 def save_to_database(employee_data):
-    conn = psycopg2.connect(DATABASE_URL)
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO attendance (name, work_date, check_in_time, check_out_time, break_time, work_summary)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    ''', (
-        employee_data["名前"],
-        employee_data["勤務日"],
-        employee_data["出勤時間"],
-        employee_data["退勤時間"],
-        employee_data["休憩時間"],
-        employee_data["業務内容サマリ"]
-    ))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO attendance (name, work_date, check_in_time, check_out_time, break_time, work_summary)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (
+            employee_data["名前"],
+            employee_data["勤務日"],
+            employee_data["出勤時間"],
+            employee_data["退勤時間"],
+            employee_data["休憩時間"],
+            employee_data["業務内容サマリ"]
+        ))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except psycopg2.Error as e:
+        app.logger.error(f"Database error: {e}")
+        raise
 
 # ステップを管理する関数
 def handle_step(user_message):
@@ -183,5 +187,7 @@ def callback():
 if __name__ == "__main__":
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
+
+
 
 
