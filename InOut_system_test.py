@@ -123,9 +123,27 @@ def handle_ai_message(event):
 def toppage():
     return 'Hello world!'
 
+# LINEのWebhookイベントを処理するルート
+@app.route('/callback', methods=['POST'])
+def callback():
+    # Get request body as text
+    signature = request.headers['X-Line-Signature']
+
+    # Handle webhook body
+    body = request.get_data(as_text=True)
+    app.logger.info("Request body: " + body)
+
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        abort(400)
+
+    return 'OK'
+
 # Bot起動コード
 if __name__ == "__main__":
     create_table()
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
