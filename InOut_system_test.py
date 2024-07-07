@@ -22,7 +22,7 @@ load_dotenv()
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-DATABASE_URL = os.getenv('DATABASE_URL')
+#DATABASE_URL = os.getenv('DATABASE_URL')
 
 # OpenAIのAPIキーを設定します
 openai.api_key = OPENAI_API_KEY
@@ -35,7 +35,7 @@ configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
 # テーブルを作成する関数
-//def create_table():
+# def create_table():
     conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
     cursor.execute('''
@@ -54,7 +54,7 @@ handler = WebhookHandler(CHANNEL_SECRET)
     conn.close()
 
 # 従業員データをデータベースに保存する関数
-//def save_to_database(employee_data):
+# def save_to_database(employee_data):
     conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
     cursor.execute('''
