@@ -50,7 +50,6 @@ employee_data = {
 }
 current_step = "start"  # 初期ステップを設定
 current_user_id = None  # 現在のユーザーIDを保存する変数
-user_steps = {}
 
 # データベース接続
 def get_db_connection():
@@ -295,52 +294,17 @@ def ask_next_question(reply_token, message=None):
 # 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    global user_steps
-    
-    user_id = event.source.user_id
-    message_text = event.message.text
+    global current_step, current_user_id
+    reply_token = event.reply_token
+    user_message = event.message.text.strip()
+    current_user_id = event.source.user_id
 
-    # Initialize user data and steps if not already present
-    if user_id not in user_steps:
-        user_steps[user_id] = {
-            "current_step": "start",
-            "employee_data": {
-                "名前": None,
-                "勤務日": None,
-                "出勤時間": None,
-                "退勤時間": None,
-                "休憩時間": None,
-                "業務内容サマリ": None,
-            }
-        }
-    
-    # Retrieve current step and employee data
-    current_step = user_steps[user_id]["current_step"]
-    employee_data = user_steps[user_id]["employee_data"]
+    app.logger.info(f"Received message: {user_message}")
+    app.logger.info(f"Current employee_data: {employee_data}")
+    app.logger.info(f"Current step: {current_step}")
 
-    # Handle steps based on current step
-    if current_step == "start":
-        # Example of handling the "start" step
-        reply_text = "こんにちは！名前を教えてください。"
-        user_steps[user_id]["current_step"] = "get_name"
-    elif current_step == "get_name":
-        employee_data["名前"] = message_text
-        reply_text = f"{message_text}さん、勤務日を教えてください。"
-        user_steps[user_id]["current_step"] = "get_date"
-    elif current_step == "get_date":
-        employee_data["勤務日"] = message_text
-        reply_text = "出勤時間を教えてください。"
-        user_steps[user_id]["current_step"] = "get_checkin_time"
-    # Add more steps as needed
-
-    # Save the updated employee data
-    user_steps[user_id]["employee_data"] = employee_data
-
-    # Send a reply message
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=reply_text)
-    )
+    ai_response = handle_step(user_message, current_user_id)
+    ask_next_question(reply_token, ai_response)
 
 # トップページ
 @app.route('/', methods=['GET'])
