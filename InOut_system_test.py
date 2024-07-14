@@ -57,19 +57,20 @@ def test_database_connection():
 def create_table():
     try:
         conn = psycopg2.connect(DATABASE_URL)
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS attendance (
-                name TEXT,
-                work_date TEXT,
-                check_in_time TEXT,
-                check_out_time TEXT,
-                break_time TEXT,
-                work_summary TEXT
-            )
-        ''')
+        with conn.cursor() as cur:
+            sql = '''
+                CREATE TABLE IF NOT EXISTS attendance (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT,
+                    work_date TEXT,
+                    check_in_time TEXT,
+                    check_out_time TEXT,
+                    break_time TEXT,
+                    work_summary TEXT
+                );
+            '''
+            cur.execute(sql)
         conn.commit()
-        cursor.close()
         conn.close()
         app.logger.info("Table created successfully or already exists.")
     except psycopg2.Error as e:
@@ -213,10 +214,3 @@ if __name__ == "__main__":
     app.logger.info("Creating table if not exists.")
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
-
-
-
-
-
-
-
