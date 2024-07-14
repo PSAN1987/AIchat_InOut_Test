@@ -258,11 +258,11 @@ def ask_next_question(reply_token, message=None):
         elif current_step == "勤務日":
             response_message = "いつの勤務日のデータを入力しますか？ (例: 2024-07-07)"
         elif current_step == "出勤時間":
-            response_messageを教えてください。 (例: 09:00)"
+            response_message = "出勤時間を教えてください。 (例: 09:00)"
         elif current_step == "退勤時間":
-            response_messageを教えてください。 (例: 18:00)"
+            response_message = "退勤時間を教えてください。 (例: 18:00)"
         elif current_step == "休憩時間":
-            response_messageを教えてください。 (例: 1時間)"
+            response_message = "休憩時間を教えてください。 (例: 1時間)"
         elif current_step == "業務内容サマリ":
             response_message = "業務内容サマリを教えてください。"
         elif current_step == "completed":
@@ -326,4 +326,3 @@ if __name__ == "__main__":
     app.logger.info("Creating table if not exists.")
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
-
