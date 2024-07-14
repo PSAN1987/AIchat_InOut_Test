@@ -151,32 +151,32 @@ def save_ai_conversation(user_id, user_message, ai_response):
 # OpenAI APIを使用してAI応答を生成する関数
 def get_ai_response(user_message):
     prompt = f"従業員が仕事の悩みについて話しています。次のメッセージにどのように応答しますか？\n\n従業員: {user_message}\nAI:"
-    response =  openai.chat.completions.create (
+    response = openai.Completion.create(
         model="text-davinci-003",
         prompt=prompt,
         max_tokens=150
     )
-    return message = response.choices[0].message.content
+    return response.choices[0].text.strip()
 
 # AIがユーザーに質問する関数
 def get_ai_question():
     prompt = "従業員の仕事の悩みを引き出すための質問をしてください。"
-    response =  openai.chat.completions.create (
+    response = openai.Completion.create(
         model="text-davinci-003",
         prompt=prompt,
         max_tokens=100
     )
-    return message = response.choices[0].message.content
+    return response.choices[0].text.strip()
 
 # モチベーションを上げるメッセージを生成する関数
 def generate_motivation_message():
     prompt = "Provide an inspirational and motivational message to help an employee start their day positively."
-    response =  openai.chat.completions.create (
+    response = openai.Completion.create(
         model="text-davinci-003",
         prompt=prompt,
         max_tokens=100
     )
-    return message = response.choices[0].message.content
+    return response.choices[0].text.strip()
 
 # スケジュールタスク
 scheduler = BackgroundScheduler()
