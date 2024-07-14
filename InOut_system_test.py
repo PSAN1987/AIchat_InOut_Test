@@ -53,6 +53,24 @@ def test_database_connection():
         app.logger.error(f"Database connection failed: {e}")
         raise
 
+# テーブルが存在するかどうかを確認する関数
+def check_table_exists():
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cursor = conn.cursor()
+        cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'attendance');")
+        exists = cursor.fetchone()[0]
+        cursor.close()
+        conn.close()
+        if exists:
+            app.logger.info("Table 'attendance' exists.")
+        else:
+            app.logger.info("Table 'attendance' does not exist.")
+        return exists
+    except psycopg2.Error as e:
+        app.logger.error(f"Failed to check if table exists: {e}")
+        raise
+
 # テーブルを作成する関数
 def create_table():
     try:
@@ -213,4 +231,7 @@ if __name__ == "__main__":
     test_database_connection()  # データベース接続をテスト
     app.logger.info("Creating table if not exists.")
     create_table()  # テーブルを作成
+    app.logger.info("Checking if table exists.")
+    check_table_exists()  # テーブルが存在するかどうかを確認
     app.run(host="0.0.0.0", port=8000, debug=True)
+
