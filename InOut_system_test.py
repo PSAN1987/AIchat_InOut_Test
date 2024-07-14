@@ -195,8 +195,10 @@ def callback():
 
 # Bot起動コード
 if __name__ == "__main__":
+    app.logger.info("Creating table if not exists.")
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
