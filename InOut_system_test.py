@@ -39,6 +39,20 @@ employee_data = {
 }
 current_step = "start"  # 初期ステップを設定
 
+# データベースへの接続をテストする関数
+def test_database_connection():
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cursor = conn.cursor()
+        cursor.execute('SELECT 1')
+        conn.commit()
+        cursor.close()
+        conn.close()
+        app.logger.info("Database connection successful.")
+    except psycopg2.Error as e:
+        app.logger.error(f"Database connection failed: {e}")
+        raise
+
 # テーブルを作成する関数
 def create_table():
     try:
@@ -195,6 +209,8 @@ def callback():
 
 # Bot起動コード
 if __name__ == "__main__":
+    app.logger.info("Testing database connection.")
+    test_database_connection()  # データベース接続をテスト
     app.logger.info("Creating table if not exists.")
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
