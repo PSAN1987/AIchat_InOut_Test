@@ -106,8 +106,12 @@ def handle_step(user_message):
     elif current_step == "業務内容サマリ":
         employee_data["業務内容サマリ"] = user_message
         if employee_data["業務内容サマリ"]:
-            save_to_database(employee_data)
-            current_step = "completed"
+            try:
+                save_to_database(employee_data)
+                current_step = "completed"
+            except psycopg2.Error as e:
+                app.logger.error(f"Failed to save data: {e}")
+                current_step = "業務内容サマリ"
     app.logger.info(f"Updated step: {current_step}")
 
 # 各ステップごとに適切な質問を送信する関数
@@ -187,6 +191,7 @@ def callback():
 if __name__ == "__main__":
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
