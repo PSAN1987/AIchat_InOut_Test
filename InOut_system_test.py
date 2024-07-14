@@ -156,7 +156,7 @@ def get_ai_response(user_message):
         prompt=prompt,
         max_tokens=150
     )
-    return response.choices[0].message.content
+    return message = response.choices[0].message.content
 
 # AIがユーザーに質問する関数
 def get_ai_question():
@@ -166,7 +166,7 @@ def get_ai_question():
         prompt=prompt,
         max_tokens=100
     )
-    return response.choices[0].message.content
+    return message = response.choices[0].message.content
 
 # モチベーションを上げるメッセージを生成する関数
 def generate_motivation_message():
@@ -176,7 +176,7 @@ def generate_motivation_message():
         prompt=prompt,
         max_tokens=100
     )
-    return response.choices[0].message.content
+    return message = response.choices[0].message.content
 
 # スケジュールタスク
 scheduler = BackgroundScheduler()
