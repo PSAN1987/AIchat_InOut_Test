@@ -60,7 +60,6 @@ def create_table():
         cursor = conn.cursor()
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS attendance (
-                id SERIAL PRIMARY KEY,
                 name TEXT,
                 work_date TEXT,
                 check_in_time TEXT,
