@@ -75,7 +75,7 @@ def create_table():
         )
         cursor = connection.cursor()
         create_table_query = '''
-            CREATE TABLE IF NOT EXISTS attendance (
+            CREATE TABLE IF NOT EXISTS Work_Table (
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
                 work_date TEXT NOT NULL,
@@ -106,7 +106,7 @@ def save_to_database(employee_data):
         )
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO attendance (name, work_date, check_in_time, check_out_time, break_time, work_summary)
+            INSERT INTO Work_Table (name, work_date, check_in_time, check_out_time, break_time, work_summary)
             VALUES (%s, %s, %s, %s, %s, %s)
         ''', (
             employee_data["名前"],
