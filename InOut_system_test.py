@@ -19,7 +19,11 @@ load_dotenv()
 # 環境変数の設定
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
-DATABASE_URL = os.getenv('DATABASE_URL')
+DATABASE_NAME = os.getenv('DATABASE_NAME')
+DATABASE_USER = os.getenv('DATABASE_USER')
+DATABASE_PASSWORD = os.getenv('DATABASE_PASSWORD')
+DATABASE_HOST = os.getenv('DATABASE_HOST')
+DATABASE_PORT = os.getenv('DATABASE_PORT')
 
 # Flaskアプリのインスタンス化
 app = Flask(__name__)
@@ -42,7 +46,13 @@ current_step = "start"  # 初期ステップを設定
 # データベースへの接続をテストする関数
 def test_database_connection():
     try:
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(
+            database=DATABASE_NAME,
+            user=DATABASE_USER,
+            password=DATABASE_PASSWORD,
+            host=DATABASE_HOST,
+            port=DATABASE_PORT
+        )
         cursor = conn.cursor()
         cursor.execute('SELECT 1')
         conn.commit()
@@ -56,8 +66,14 @@ def test_database_connection():
 # テーブルを作成する関数
 def create_table():
     try:
-        conn = psycopg2.connect(DATABASE_URL)
-        cursor = conn.cursor()
+        connection = psycopg2.connect(
+            database=DATABASE_NAME,
+            user=DATABASE_USER,
+            password=DATABASE_PASSWORD,
+            host=DATABASE_HOST,
+            port=DATABASE_PORT
+        )
+        cursor = connection.cursor()
         create_table_query = '''
             CREATE TABLE IF NOT EXISTS attendance (
                 id SERIAL PRIMARY KEY,
@@ -70,9 +86,9 @@ def create_table():
             );
         '''
         cursor.execute(create_table_query)
-        conn.commit()
+        connection.commit()
         cursor.close()
-        conn.close()
+        connection.close()
         app.logger.info("Table created successfully or already exists.")
     except Exception as error:
         app.logger.error(f"Failed to create table: {error}")
@@ -81,7 +97,13 @@ def create_table():
 # 従業員データをデータベースに保存する関数
 def save_to_database(employee_data):
     try:
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(
+            database=DATABASE_NAME,
+            user=DATABASE_USER,
+            password=DATABASE_PASSWORD,
+            host=DATABASE_HOST,
+            port=DATABASE_PORT
+        )
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO attendance (name, work_date, check_in_time, check_out_time, break_time, work_summary)
