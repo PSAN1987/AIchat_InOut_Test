@@ -163,27 +163,27 @@ def get_ai_response(user_message):
 
 # AIがユーザーに質問する関数
 def get_ai_question():
-    prompt = "従業員の仕事の悩みを引き出すための質問をしてください。"
+    prompt = "従業員の悩みを引き出す効果的な質問をする"
     response = openai.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt}
         ],
-        max_tokens=100
+        max_tokens=300
     )
     return response.choices[0].message.content
 
 # モチベーションを上げるメッセージを生成する関数
 def generate_motivation_message():
-    prompt = "Provide an inspirational and motivational message to help an employee start their day positively."
+    prompt = "従業員のモチベーションを上げるメッセージを300文字以内で生成する."
     response = openai.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt}
         ],
-        max_tokens=100
+        max_tokens=500
     )
     return response.choices[0].message.content
 
@@ -283,7 +283,8 @@ def ask_next_question(reply_token, message=None):
         elif current_step == "業務内容サマリ":
             response_message = "業務内容サマリを教えてください。"
         elif current_step == "AI対話モード":
-            response_message = get_ai_question()
+            response_message = "ありがとうございます。勤怠情報を入力完了しました。お疲れさまでした。"
+            responce_message = get_ai_question()
 
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=reply_token,
