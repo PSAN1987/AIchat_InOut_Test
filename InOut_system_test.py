@@ -41,22 +41,27 @@ current_step = "start"  # 初期ステップを設定
 
 # テーブルを作成する関数
 def create_table():
-    conn = psycopg2.connect(DATABASE_URL)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS attendance (
-            id SERIAL PRIMARY KEY,
-            name TEXT,
-            work_date TEXT,
-            check_in_time TEXT,
-            check_out_time TEXT,
-            break_time TEXT,
-            work_summary TEXT
-        )
-    ''')
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS attendance (
+                id SERIAL PRIMARY KEY,
+                name TEXT,
+                work_date TEXT,
+                check_in_time TEXT,
+                check_out_time TEXT,
+                break_time TEXT,
+                work_summary TEXT
+            )
+        ''')
+        conn.commit()
+        cursor.close()
+        conn.close()
+        app.logger.info("Table created successfully or already exists.")
+    except psycopg2.Error as e:
+        app.logger.error(f"Failed to create table: {e}")
+        raise
 
 # 従業員データをデータベースに保存する関数
 def save_to_database(employee_data):
@@ -77,6 +82,7 @@ def save_to_database(employee_data):
         conn.commit()
         cursor.close()
         conn.close()
+        app.logger.info("Data saved successfully.")
     except psycopg2.Error as e:
         app.logger.error(f"Database error: {e}")
         raise
@@ -191,6 +197,7 @@ def callback():
 if __name__ == "__main__":
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
