@@ -48,45 +48,35 @@ def test_database_connection():
         conn.commit()
         cursor.close()
         conn.close()
-        return "Database connection successful."
+        app.logger.info("Database connection successful.")
     except psycopg2.Error as e:
-        return f"Database connection failed: {e}"
-
-# テーブルが存在するかどうかを確認する関数
-def check_table_exists():
-    try:
-        conn = psycopg2.connect(DATABASE_URL)
-        cursor = conn.cursor()
-        cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'attendance');")
-        exists = cursor.fetchone()[0]
-        cursor.close()
-        conn.close()
-        return "Table 'attendance' exists." if exists else "Table 'attendance' does not exist."
-    except psycopg2.Error as e:
-        return f"Failed to check if table exists: {e}"
+        app.logger.error(f"Database connection failed: {e}")
+        raise
 
 # テーブルを作成する関数
 def create_table():
     try:
         conn = psycopg2.connect(DATABASE_URL)
-        with conn.cursor() as cur:
-            sql = '''
-                CREATE TABLE IF NOT EXISTS attendance (
-                    id SERIAL PRIMARY KEY,
-                    name TEXT,
-                    work_date TEXT,
-                    check_in_time TEXT,
-                    check_out_time TEXT,
-                    break_time TEXT,
-                    work_summary TEXT
-                );
-            '''
-            cur.execute(sql)
+        cursor = conn.cursor()
+        create_table_query = '''
+            CREATE TABLE IF NOT EXISTS attendance (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                work_date TEXT NOT NULL,
+                check_in_time TEXT NOT NULL,
+                check_out_time TEXT NOT NULL,
+                break_time TEXT NOT NULL,
+                work_summary TEXT NOT NULL
+            );
+        '''
+        cursor.execute(create_table_query)
         conn.commit()
+        cursor.close()
         conn.close()
-        return "Table created successfully or already exists."
-    except psycopg2.Error as e:
-        return f"Failed to create table: {e}"
+        app.logger.info("Table created successfully or already exists.")
+    except Exception as error:
+        app.logger.error(f"Failed to create table: {error}")
+        raise
 
 # 従業員データをデータベースに保存する関数
 def save_to_database(employee_data):
@@ -107,13 +97,16 @@ def save_to_database(employee_data):
         conn.commit()
         cursor.close()
         conn.close()
-        return "Data saved successfully."
+        app.logger.info("Data saved successfully.")
     except psycopg2.Error as e:
-        return f"Database error: {e}"
+        app.logger.error(f"Database error: {e}")
+        raise
 
 # ステップを管理する関数
 def handle_step(user_message):
     global current_step, employee_data
+    app.logger.info(f"Handling step: {current_step} with message: {user_message}")
+
     if current_step == "start":
         current_step = "名前"
     elif current_step == "名前":
@@ -134,19 +127,21 @@ def handle_step(user_message):
     elif current_step == "業務内容サマリ":
         employee_data["業務内容サマリ"] = user_message
         if employee_data["業務内容サマリ"]:
-            return save_to_database(employee_data)
-            current_step = "completed"
-    return f"Updated step: {current_step}"
+            try:
+                save_to_database(employee_data)
+                current_step = "completed"
+            except psycopg2.Error as e:
+                app.logger.error(f"Failed to save data: {e}")
+                current_step = "業務内容サマリ"
+    app.logger.info(f"Updated step: {current_step}")
 
 # 各ステップごとに適切な質問を送信する関数
-def ask_next_question(reply_token, message=None):
+def ask_next_question(reply_token):
     global current_step
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
 
-        if message:
-            response_message = message
-        elif current_step == "start":
+        if current_step == "start":
             response_message = "こんにちは！まず、あなたの名前を教えてください。"
         elif current_step == "名前":
             response_message = "名前を教えてください。"
@@ -184,8 +179,12 @@ def handle_message(event):
     reply_token = event.reply_token
     user_message = event.message.text.strip()
 
-    message = handle_step(user_message)
-    ask_next_question(reply_token, message)
+    app.logger.info(f"Received message: {user_message}")
+    app.logger.info(f"Current employee_data: {employee_data}")
+    app.logger.info(f"Current step: {current_step}")
+
+    handle_step(user_message)
+    ask_next_question(reply_token)
 
 # トップページ
 @app.route('/', methods=['GET'])
@@ -200,6 +199,7 @@ def callback():
 
     # Handle webhook body
     body = request.get_data(as_text=True)
+    app.logger.info("Request body: " + body)
 
     try:
         handler.handle(body, signature)
@@ -210,12 +210,8 @@ def callback():
 
 # Bot起動コード
 if __name__ == "__main__":
-    db_test_message = test_database_connection()  # データベース接続をテスト
-    table_create_message = create_table()  # テーブルを作成
-    table_check_message = check_table_exists()  # テーブルが存在するかどうかを確認
-
-    print(db_test_message)
-    print(table_create_message)
-    print(table_check_message)
-
+    app.logger.info("Testing database connection.")
+    test_database_connection()  # データベース接続をテスト
+    app.logger.info("Creating table if not exists.")
+    create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
