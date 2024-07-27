@@ -12,7 +12,7 @@ from linebot.v3.messaging import (
 from linebot.v3.webhooks import (
     MessageEvent, TextMessageContent
 )
-
+from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 
 # .envファイルを読み込む
@@ -189,6 +189,26 @@ def save_to_database(user_id, employee_data):
     except psycopg2.Error as e:
         logger.error(f"Failed to save data: {e}")
         raise
+
+# 毎朝7時にメッセージを送信する関数
+def send_daily_message():
+    try:
+        # ユーザーIDをデータベースやファイルから取得する必要があります
+        user_ids = get_all_user_ids()  # これはユーザーIDを取得する関数です
+        for user_id in user_ids:
+            line_bot_api.push_message(user_id, TextMessage(text="おはようございます。昨日の勤怠情報を登録してくれますか？"))
+        logger.info("Daily message sent successfully.")
+    except Exception as e:
+        logger.error(f"Failed to send daily message: {e}")
+
+# ユーザーIDを取得するダミー関数（実際にはデータベースなどから取得する実装が必要です）
+def get_all_user_ids():
+    return ['USER_ID_1', 'USER_ID_2']  # ここに実際のユーザーIDリストを返す実装を追加します
+
+# スケジューラーを設定
+scheduler = BackgroundScheduler()
+scheduler.add_job(send_daily_message, 'cron', hour=7, minute=0)
+scheduler.start()
 
 # 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
 @handler.add(MessageEvent, message=TextMessageContent)
