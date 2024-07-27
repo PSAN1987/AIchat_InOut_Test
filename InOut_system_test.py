@@ -84,7 +84,7 @@ def create_table():
                 work_date DATE,
                 check_in_time TIME,
                 check_out_time TIME,
-                break_time INTERVAL,
+                break_time TIME,
                 work_summary TEXT
             )
         ''')
@@ -140,11 +140,11 @@ def handle_step(user_message, user_id):
             else:
                 raise ValueError("退勤時間の形式が正しくありません。 (例: 18:00)")
         elif current_step == "休憩時間":
-            if validate_break_time(user_message):
+            if validate_time(user_message):
                 employee_data["休憩時間"] = user_message
                 current_step = "業務内容サマリ"
             else:
-                raise ValueError("休憩時間の形式が正しくありません。 (例: 1時間)")
+                raise ValueError("休憩時間の形式が正しくありません。 (例: 01:00)")
         elif current_step == "業務内容サマリ":
             employee_data["業務内容サマリ"] = user_message
             save_to_database(user_id, employee_data)
@@ -173,10 +173,6 @@ def validate_time(time_text):
     except ValueError:
         return False
 
-def validate_break_time(break_time_text):
-    pattern = re.compile(r'^\d+時間$')
-    return bool(pattern.match(break_time_text))
-
 def ask_next_question(reply_token, user_id):
     global user_steps
     step_data = user_steps[user_id]
@@ -189,13 +185,13 @@ def ask_next_question(reply_token, user_id):
     elif current_step == "勤務日":
         response_message = "勤務日を教えてください。 (例: 2023-07-01)"
     elif current_step == "出勤時間":
-        response_message = "出勤時間を教えてください。 (例: 09:00)"
+        response_message = "出勤時間を教えてください。 (入力例: 09:00)"
     elif current_step == "退勤時間":
-        response_message = "退勤時間を教えてください。 (例: 18:00)"
+        response_message = "退勤時間を教えてください。 (入力例: 18:00)"
     elif current_step == "休憩時間":
-        response_message = "休憩時間を教えてください。 (例: 1時間)"
+        response_message = "休憩時間を教えてください。 (入力例: 01:00)"
     elif current_step == "業務内容サマリ":
-        response_message = "業務内容サマリを教えてください。"
+        response_message = "業務内容サマリを教えてください。 (入力例: アプリ開発)"
     elif current_step == "completed":
         response_message = "データが保存されました。ありがとうございます。"
         del user_steps[user_id]
@@ -267,7 +263,7 @@ def handle_message(event):
         logger.error(f"Error in handle_message: {e}")
         line_bot_api.reply_message(ReplyMessageRequest(
             reply_token=reply_token,
-            messages=[TextMessage(text="エラーが発生しました。もう一度やり直してください。")]
+            messages=[TextMessage(text="エラーが発生しました。入力形式に従って、もう一度やり直してください。")]
         ))
 
 # トップページ
