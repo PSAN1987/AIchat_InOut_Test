@@ -98,7 +98,7 @@ def handle_step(user_message, user_id):
     global user_steps
     if user_id not in user_steps:
         user_steps[user_id] = {
-            "current_step": "名前",
+            "current_step": "start",
             "employee_data": {
                 "名前": None,
                 "勤務日": None,
@@ -113,7 +113,9 @@ def handle_step(user_message, user_id):
     current_step = step_data["current_step"]
     employee_data = step_data["employee_data"]
 
-    if current_step == "名前":
+    if current_step == "start":
+        current_step = "名前"
+    elif current_step == "名前":
         employee_data["名前"] = user_message
         current_step = "勤務日"
     elif current_step == "勤務日":
@@ -142,7 +144,9 @@ def ask_next_question(reply_token, user_id):
     step_data = user_steps[user_id]
     current_step = step_data["current_step"]
 
-    if current_step == "名前":
+    if current_step == "start":
+        response_message = "名前を教えてください。"
+    elif current_step == "名前":
         response_message = "名前を教えてください。"
     elif current_step == "勤務日":
         response_message = "勤務日を教えてください。 (例: 2023-07-01)"
@@ -196,7 +200,7 @@ def handle_message(event):
 
     logger.info(f"Received message: {user_message} from user: {user_id}")
     logger.info(f"Current employee_data: {user_steps.get(user_id, {}).get('employee_data', {})}")
-    logger.info(f"Current step: {user_steps.get(user_id, {}).get('current_step', '名前')}")
+    logger.info(f"Current step: {user_steps.get(user_id, {}).get('current_step', 'start')}")
 
     try:
         handle_step(user_message, user_id)
