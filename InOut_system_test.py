@@ -13,6 +13,8 @@ from linebot.v3.webhooks import (
     MessageEvent, TextMessageContent
 )
 
+import logging
+
 # .envファイルを読み込む
 load_dotenv()
 
@@ -27,6 +29,10 @@ DATABASE_PORT = os.getenv('DATABASE_PORT')
 
 # Flaskアプリのインスタンス化
 app = Flask(__name__)
+
+# ログ設定
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # LINEのアクセストークンを読み込む
 configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
@@ -50,9 +56,9 @@ def test_database_connection():
         conn.commit()
         cursor.close()
         conn.close()
-        app.logger.info("Database connection successful.")
+        logger.info("Database connection successful.")
     except psycopg2.Error as e:
-        app.logger.error(f"Database connection failed: {e}")
+        logger.error(f"Database connection failed: {e}")
         raise
 
 # テーブルを作成する関数
@@ -81,16 +87,16 @@ def create_table():
         connection.commit()
         cursor.close()
         connection.close()
-        app.logger.info("Table created successfully.")
+        logger.info("Table created successfully.")
     except psycopg2.Error as e:
-        app.logger.error(f"Failed to create table: {e}")
+        logger.error(f"Failed to create table: {e}")
         raise
 
 def handle_step(user_message, user_id):
     global user_steps
     if user_id not in user_steps:
         user_steps[user_id] = {
-            "current_step": "start",
+            "current_step": "名前",
             "employee_data": {
                 "名前": None,
                 "勤務日": None,
@@ -105,9 +111,7 @@ def handle_step(user_message, user_id):
     current_step = step_data["current_step"]
     employee_data = step_data["employee_data"]
 
-    if current_step == "start":
-        current_step = "名前"
-    elif current_step == "名前":
+    if current_step == "名前":
         employee_data["名前"] = user_message
         current_step = "勤務日"
     elif current_step == "勤務日":
@@ -175,9 +179,9 @@ def save_to_database(user_id, employee_data):
         connection.commit()
         cursor.close()
         connection.close()
-        app.logger.info("Data saved successfully.")
+        logger.info("Data saved successfully.")
     except psycopg2.Error as e:
-        app.logger.error(f"Failed to save data: {e}")
+        logger.error(f"Failed to save data: {e}")
         raise
 
 # 初回メッセージ送信をトリガーするためにユーザーからのメッセージをハンドリング
@@ -188,12 +192,19 @@ def handle_message(event):
     user_message = event.message.text.strip()
     user_id = event.source.user_id  # LINE IDを取得
 
-    app.logger.info(f"Received message: {user_message} from user: {user_id}")
-    app.logger.info(f"Current employee_data: {user_steps.get(user_id, {}).get('employee_data', {})}")
-    app.logger.info(f"Current step: {user_steps.get(user_id, {}).get('current_step', 'start')}")
+    logger.info(f"Received message: {user_message} from user: {user_id}")
+    logger.info(f"Current employee_data: {user_steps.get(user_id, {}).get('employee_data', {})}")
+    logger.info(f"Current step: {user_steps.get(user_id, {}).get('current_step', '名前')}")
 
-    handle_step(user_message, user_id)
-    ask_next_question(reply_token, user_id)
+    try:
+        handle_step(user_message, user_id)
+        ask_next_question(reply_token, user_id)
+    except Exception as e:
+        logger.error(f"Error in handle_message: {e}")
+        line_bot_api.reply_message(ReplyMessageRequest(
+            reply_token=reply_token,
+            messages=[TextMessage(text="エラーが発生しました。もう一度やり直してください。")]
+        ))
 
 # トップページ
 @app.route('/', methods=['GET'])
@@ -208,19 +219,23 @@ def callback():
 
     # Handle webhook body
     body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
+    logger.info("Request body: " + body)
 
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
+        logger.error("Invalid signature. Check your channel access token/channel secret.")
         abort(400)
+    except Exception as e:
+        logger.error(f"Error in callback: {e}")
+        abort(500)
 
     return 'OK'
 
 # Bot起動コード
 if __name__ == "__main__":
-    app.logger.info("Testing database connection.")
+    logger.info("Testing database connection.")
     test_database_connection()  # データベース接続をテスト
-    app.logger.info("Creating table if not exists.")
+    logger.info("Creating table if not exists.")
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
