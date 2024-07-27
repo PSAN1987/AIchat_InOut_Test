@@ -14,6 +14,8 @@ from linebot.v3.webhooks import (
 )
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
+import re
+from datetime import datetime
 
 # .envファイルを読み込む
 load_dotenv()
@@ -113,31 +115,67 @@ def handle_step(user_message, user_id):
     current_step = step_data["current_step"]
     employee_data = step_data["employee_data"]
 
-    if current_step == "start":
-        current_step = "名前"
-    elif current_step == "名前":
-        employee_data["名前"] = user_message
-        current_step = "勤務日"
-    elif current_step == "勤務日":
-        employee_data["勤務日"] = user_message
-        current_step = "出勤時間"
-    elif current_step == "出勤時間":
-        employee_data["出勤時間"] = user_message
-        current_step = "退勤時間"
-    elif current_step == "退勤時間":
-        employee_data["退勤時間"] = user_message
-        current_step = "休憩時間"
-    elif current_step == "休憩時間":
-        employee_data["休憩時間"] = user_message
-        current_step = "業務内容サマリ"
-    elif current_step == "業務内容サマリ":
-        employee_data["業務内容サマリ"] = user_message
-        save_to_database(user_id, employee_data)
-        current_step = "completed"
-    
-    step_data["current_step"] = current_step
-    step_data["employee_data"] = employee_data
-    user_steps[user_id] = step_data
+    try:
+        if current_step == "start":
+            current_step = "名前"
+        elif current_step == "名前":
+            employee_data["名前"] = user_message
+            current_step = "勤務日"
+        elif current_step == "勤務日":
+            if validate_date(user_message):
+                employee_data["勤務日"] = user_message
+                current_step = "出勤時間"
+            else:
+                raise ValueError("勤務日の形式が正しくありません。 (例: 2023-07-01)")
+        elif current_step == "出勤時間":
+            if validate_time(user_message):
+                employee_data["出勤時間"] = user_message
+                current_step = "退勤時間"
+            else:
+                raise ValueError("出勤時間の形式が正しくありません。 (例: 09:00)")
+        elif current_step == "退勤時間":
+            if validate_time(user_message):
+                employee_data["退勤時間"] = user_message
+                current_step = "休憩時間"
+            else:
+                raise ValueError("退勤時間の形式が正しくありません。 (例: 18:00)")
+        elif current_step == "休憩時間":
+            if validate_break_time(user_message):
+                employee_data["休憩時間"] = user_message
+                current_step = "業務内容サマリ"
+            else:
+                raise ValueError("休憩時間の形式が正しくありません。 (例: 1時間)")
+        elif current_step == "業務内容サマリ":
+            employee_data["業務内容サマリ"] = user_message
+            save_to_database(user_id, employee_data)
+            current_step = "completed"
+        
+        step_data["current_step"] = current_step
+        step_data["employee_data"] = employee_data
+        user_steps[user_id] = step_data
+
+    except ValueError as e:
+        # エラーメッセージを送信し、ステップを最初に戻す
+        line_bot_api.push_message(user_id, TextMessage(text=str(e)))
+        user_steps[user_id]["current_step"] = "start"
+
+def validate_date(date_text):
+    try:
+        datetime.strptime(date_text, '%Y-%m-%d')
+        return True
+    except ValueError:
+        return False
+
+def validate_time(time_text):
+    try:
+        datetime.strptime(time_text, '%H:%M')
+        return True
+    except ValueError:
+        return False
+
+def validate_break_time(break_time_text):
+    pattern = re.compile(r'^\d+時間$')
+    return bool(pattern.match(break_time_text))
 
 def ask_next_question(reply_token, user_id):
     global user_steps
