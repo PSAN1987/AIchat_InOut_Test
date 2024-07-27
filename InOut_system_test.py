@@ -36,6 +36,8 @@ logger = logging.getLogger(__name__)
 
 # LINEのアクセストークンを読み込む
 configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
+api_client = ApiClient(configuration)
+line_bot_api = MessagingApi(api_client)
 handler = WebhookHandler(CHANNEL_SECRET)
 
 # グローバル変数としてuser_stepsを初期化
