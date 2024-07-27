@@ -106,6 +106,8 @@ def handle_step(user_message, user_id):
     employee_data = step_data["employee_data"]
 
     if current_step == "start":
+        current_step = "名前"
+    elif current_step == "名前":
         employee_data["名前"] = user_message
         current_step = "勤務日"
     elif current_step == "勤務日":
@@ -134,7 +136,7 @@ def ask_next_question(reply_token, user_id):
     step_data = user_steps[user_id]
     current_step = step_data["current_step"]
 
-    if current_step == "start":
+    if current_step == "名前":
         response_message = "名前を教えてください。"
     elif current_step == "勤務日":
         response_message = "勤務日を教えてください。 (例: 2023-07-01)"
@@ -222,4 +224,3 @@ if __name__ == "__main__":
     app.logger.info("Creating table if not exists.")
     create_table()  # テーブルを作成
     app.run(host="0.0.0.0", port=8000, debug=True)
-
