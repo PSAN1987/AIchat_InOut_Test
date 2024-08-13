@@ -98,7 +98,7 @@ def process_step(user_id, user_input):
             cur.close()
             conn.close()
             reply_text = "勤怠情報が保存されました。"
-            user_states.pop(user_id)  # 状態をリセット
+            user_states.pop(user_id)  # 状態をリセットして勤怠入力モードから抜ける
         else:
             reply_text = "もう一度最初から入力してください。名前を入力してください:"
             state["step"] = 1
