@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import os
 import psycopg2
@@ -13,9 +12,7 @@ from linebot.v3.messaging import (
 from linebot.v3.webhooks import (
     MessageEvent, TextMessageContent
 )
-from apscheduler.schedulers.background import BackgroundScheduler
 import logging
-import re
 from datetime import datetime
 
 # .envファイルを読み込む
@@ -86,14 +83,7 @@ def process_step(user_id, user_input):
         state["step"] = 6
     elif step == 6:
         state["summary"] = user_input
-        reply_text = f"確認してください:
-名前: {state['name']}
-出勤日: {state['date']}
-出勤時間: {state['check_in']}
-退勤時間: {state['check_out']}
-休憩時間: {state['break_time']}
-業務サマリ: {state['summary']}
-この内容でよろしいですか? (Y/N)"
+        reply_text = f"確認してください:\n名前: {state['name']}\n出勤日: {state['date']}\n出勤時間: {state['check_in']}\n退勤時間: {state['check_out']}\n休憩時間: {state['break_time']}\n業務サマリ: {state['summary']}\nこの内容でよろしいですか? (Y/N)"
         state["step"] = 7
     elif step == 7:
         if user_input.lower() == 'y':
