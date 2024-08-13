@@ -63,23 +63,23 @@ def process_step(user_id, user_input):
 
     if step == 1:
         state["name"] = user_input
-        reply_text = "出勤日を入力してください (例: 2024-08-15):"
+        reply_text = "出勤日を入力してください (YYYY-MM-DD):"
         state["step"] = 2
     elif step == 2:
         state["work_date"] = user_input
-        reply_text = "出勤時間を入力してください (例: 09:00):"
+        reply_text = "出勤時間を入力してください (HH:MM):"
         state["step"] = 3
     elif step == 3:
         state["check_in_time"] = user_input
-        reply_text = "退勤時間を入力してください (例: 18:00):"
+        reply_text = "退勤時間を入力してください (HH:MM):"
         state["step"] = 4
     elif step == 4:
         state["check_out_time"] = user_input
-        reply_text = "休憩時間を入力してください (例: 01:00):"
+        reply_text = "休憩時間を入力してください (HH:MM):"
         state["step"] = 5
     elif step == 5:
         state["break_time"] = user_input
-        reply_text = "業務サマリを入力してください (例: プロジェクトAの開発作業):"
+        reply_text = "業務サマリを入力してください:"
         state["step"] = 6
     elif step == 6:
         state["work_summary"] = user_input
@@ -127,7 +127,7 @@ def handle_message(event):
     if user_input == "勤怠":
         # 勤怠入力モードに入る
         user_states[user_id] = {"step": 1}
-        reply_text = "勤怠入力モードに入りました。名前を入力してください (例: 山田 太郎):"
+        reply_text = "勤怠入力モードに入りました。名前を入力してください:"
     elif user_id in user_states:
         # 勤怠入力ステップの処理を続ける
         reply_text = process_step(user_id, user_input)
