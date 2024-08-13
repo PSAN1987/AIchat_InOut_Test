@@ -63,27 +63,27 @@ def process_step(user_id, user_input):
 
     if step == 1:
         state["name"] = user_input
-        reply_text = "出勤日を入力してください (YYYY-MM-DD):"
+        reply_text = "出勤日を入力してください (例: 2024-08-15):"
         state["step"] = 2
     elif step == 2:
-        state["date"] = user_input
-        reply_text = "出勤時間を入力してください (HH:MM):"
+        state["work_date"] = user_input
+        reply_text = "出勤時間を入力してください (例: 09:00):"
         state["step"] = 3
     elif step == 3:
-        state["check_in"] = user_input
-        reply_text = "退勤時間を入力してください (HH:MM):"
+        state["check_in_time"] = user_input
+        reply_text = "退勤時間を入力してください (例: 18:00):"
         state["step"] = 4
     elif step == 4:
-        state["check_out"] = user_input
-        reply_text = "休憩時間を入力してください (HH:MM):"
+        state["check_out_time"] = user_input
+        reply_text = "休憩時間を入力してください (例: 01:00):"
         state["step"] = 5
     elif step == 5:
         state["break_time"] = user_input
-        reply_text = "業務サマリを入力してください:"
+        reply_text = "業務サマリを入力してください (例: プロジェクトAの開発作業):"
         state["step"] = 6
     elif step == 6:
-        state["summary"] = user_input
-        reply_text = f"確認してください:\n名前: {state['name']}\n出勤日: {state['date']}\n出勤時間: {state['check_in']}\n退勤時間: {state['check_out']}\n休憩時間: {state['break_time']}\n業務サマリ: {state['summary']}\nこの内容でよろしいですか? (Y/N)"
+        state["work_summary"] = user_input
+        reply_text = f"確認してください:\n名前: {state['name']}\n出勤日: {state['work_date']}\n出勤時間: {state['check_in_time']}\n退勤時間: {state['check_out_time']}\n休憩時間: {state['break_time']}\n業務サマリ: {state['work_summary']}\nこの内容でよろしいですか? (Y/N)"
         state["step"] = 7
     elif step == 7:
         if user_input.lower() == 'y':
@@ -91,8 +91,8 @@ def process_step(user_id, user_input):
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute(
-                "INSERT INTO attendance (name, date, check_in, check_out, break_time, summary) VALUES (%s, %s, %s, %s, %s, %s)",
-                (state["name"], state["date"], state["check_in"], state["check_out"], state["break_time"], state["summary"])
+                "INSERT INTO attendance (name, work_date, check_in_time, check_out_time, break_time, work_summary, line_id) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (state["name"], state["work_date"], state["check_in_time"], state["check_out_time"], state["break_time"], state["work_summary"], user_id)
             )
             conn.commit()
             cur.close()
@@ -127,7 +127,7 @@ def handle_message(event):
     if user_input == "勤怠":
         # 勤怠入力モードに入る
         user_states[user_id] = {"step": 1}
-        reply_text = "勤怠入力モードに入りました。名前を入力してください:"
+        reply_text = "勤怠入力モードに入りました。名前を入力してください (例: 山田 太郎):"
     elif user_id in user_states:
         # 勤怠入力ステップの処理を続ける
         reply_text = process_step(user_id, user_input)
