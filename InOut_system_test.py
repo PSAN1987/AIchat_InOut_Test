@@ -132,7 +132,7 @@ def handle_message(event):
         # 勤怠入力ステップの処理を続ける
         reply_text = process_step(user_id, user_input)
     else:
-        # その他のメッセージへの対応
+        # 状態がリセットされている場合
         reply_text = "勤怠情報を入力する場合は、「勤怠」というメッセージを書いてください。"
 
     # メッセージを返信
