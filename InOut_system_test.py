@@ -58,8 +58,8 @@ user_states = {}
 
 # 勤怠入力ステップの処理関数
 def process_step(user_id, user_input):
-    state = user_states.get(user_id, {})
-    step = state.get("step", 1)
+    state = user_states.get(user_id, {"step": 0})
+    step = state.get("step", 0)
 
     if step == 1:
         state["name"] = user_input
@@ -98,10 +98,11 @@ def process_step(user_id, user_input):
             cur.close()
             conn.close()
             reply_text = "勤怠情報が保存されました。"
-            user_states.pop(user_id)  # 状態をリセットして勤怠入力モードから抜ける
+            state["step"] = 0  # 状態をリセットして勤怠入力モードから抜ける
         else:
             reply_text = "もう一度最初から入力してください。名前を入力してください:"
             state["step"] = 1
+
     user_states[user_id] = state
     return reply_text
 
@@ -128,11 +129,11 @@ def handle_message(event):
         # 勤怠入力モードに入る
         user_states[user_id] = {"step": 1}
         reply_text = "勤怠入力モードに入りました。名前を入力してください:"
-    elif user_id in user_states:
+    elif user_id in user_states and user_states[user_id].get("step", 0) > 0:
         # 勤怠入力ステップの処理を続ける
         reply_text = process_step(user_id, user_input)
     else:
-        # ユーザーが勤怠入力モードに入っていない場合
+        # 勤怠入力モードに入っていない場合
         reply_text = "勤怠情報を入力する場合は、「勤怠」というメッセージを書いてください。"
 
     # メッセージを返信
