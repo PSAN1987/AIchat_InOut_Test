@@ -63,27 +63,27 @@ def process_step(user_id, user_input):
 
     if step == 1:
         state["name"] = user_input
-        reply_text = "出勤日を入力してください (YYYY-MM-DD):"
+        reply_text = "出勤日を入力してください (YYYY-MM-DD) 例 2024-01-01:"
         state["step"] = 2
     elif step == 2:
         state["work_date"] = user_input
-        reply_text = "出勤時間を入力してください (HH:MM):"
+        reply_text = "出勤時間を入力してください (HH:MM) 例 8:00:"
         state["step"] = 3
     elif step == 3:
         state["check_in_time"] = user_input
-        reply_text = "退勤時間を入力してください (HH:MM):"
+        reply_text = "退勤時間を入力してください (HH:MM) 例 17:00"
         state["step"] = 4
     elif step == 4:
         state["check_out_time"] = user_input
-        reply_text = "休憩時間を入力してください (HH:MM):"
+        reply_text = "休憩時間を入力してください (HH:MM) 例 1:00:"
         state["step"] = 5
     elif step == 5:
         state["break_time"] = user_input
-        reply_text = "業務サマリを入力してください:"
+        reply_text = "業務サマリを入力してください 例 アプリ開発:"
         state["step"] = 6
     elif step == 6:
         state["work_summary"] = user_input
-        reply_text = f"確認してください:\n名前: {state['name']}\n出勤日: {state['work_date']}\n出勤時間: {state['check_in_time']}\n退勤時間: {state['check_out_time']}\n休憩時間: {state['break_time']}\n業務サマリ: {state['work_summary']}\nこの内容でよろしいですか? (Y/N)"
+        reply_text = f"確認してください:\n名前: {state['name']}\n出勤日: {state['work_date']}\n出勤時間: {state['check_in_time']}\n退勤時間: {state['check_out_time']}\n休憩時間: {state['break_time']}\n業務サマリ: {state['work_summary']}\nこの内容でよろしいですか? (Y/N) 例 Y"
         state["step"] = 7
     elif step == 7:
         if user_input.lower() == 'y':
