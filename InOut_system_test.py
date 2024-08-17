@@ -13,7 +13,6 @@ from linebot.v3.webhooks import (
     MessageEvent, TextMessageContent
 )
 import logging
-from datetime import datetime
 
 # .envファイルを読み込む
 load_dotenv()
@@ -53,7 +52,7 @@ def get_db_connection():
     )
     return conn
 
-# ユーザごとの勤怠入力状態を保持する辞書
+# ユーザごとの勤怠入力状態と休暇入力状態を保持する辞書
 user_states = {}
 
 # 勤怠入力ステップの処理関数
@@ -71,7 +70,7 @@ def process_step(user_id, user_input):
         state["step"] = 3
     elif step == 3:
         state["check_in_time"] = user_input
-        reply_text = "退勤時間を入力してください (HH:MM) 例 17:00"
+        reply_text = "退勤時間を入力してください (HH:MM) 例 17:00:"
         state["step"] = 4
     elif step == 4:
         state["check_out_time"] = user_input
@@ -106,18 +105,39 @@ def process_step(user_id, user_input):
     user_states[user_id] = state
     return reply_text
 
-# LINEからのリクエストを処理
-@app.route("/callback", methods=['POST'])
-def callback():
-    signature = request.headers['X-Line-Signature']
+# 休暇入力ステップの処理関数
+def process_vacation_step(user_id, user_input):
+    state = user_states.get(user_id, {"vacation_step": 0})
+    step = state.get("vacation_step", 0)
 
-    # リクエストの検証
-    try:
-        handler.handle(request.get_data(as_text=True), signature)
-    except InvalidSignatureError:
-        abort(400)
+    if step == 1:
+        state["vacation_date"] = user_input
+        reply_text = "休暇の種類を選択してください (全日休, 午前休, 午後休):"
+        state["vacation_step"] = 2
+    elif step == 2:
+        state["vacation_type"] = user_input
+        reply_text = f"確認してください:\n休暇日: {state['vacation_date']}\n休暇種類: {state['vacation_type']}\nこの内容でよろしいですか? (Y/N) 例 Y"
+        state["vacation_step"] = 3
+    elif step == 3:
+        if user_input.lower() == 'y':
+            # データベースに保存
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO vacation (vacation_date, vacation_type, line_id) VALUES (%s, %s, %s)",
+                (state["vacation_date"], state["vacation_type"], user_id)
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
+            reply_text = "休暇情報が保存されました。"
+            state["vacation_step"] = 0  # 状態をリセットして休暇入力モードから抜ける
+        else:
+            reply_text = "もう一度最初から入力してください。休暇日を入力してください (YYYY-MM-DD):"
+            state["vacation_step"] = 1
 
-    return 'OK'
+    user_states[user_id] = state
+    return reply_text
 
 # メッセージイベントの処理
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -127,14 +147,23 @@ def handle_message(event):
 
     if user_input == "勤怠":
         # 勤怠入力モードに入る
-        user_states[user_id] = {"step": 1}
+        user_states[user_id] = {"step": 1, "mode": "attendance"}
         reply_text = "勤怠入力モードに入りました。名前を入力してください:"
-    elif user_id in user_states and user_states[user_id].get("step", 0) > 0:
-        # 勤怠入力ステップの処理を続ける
-        reply_text = process_step(user_id, user_input)
+    elif user_input == "休暇":
+        # 休暇入力モードに入る
+        user_states[user_id] = {"vacation_step": 1, "mode": "vacation"}
+        reply_text = "休暇入力モードに入りました。休暇日を入力してください (YYYY-MM-DD):"
+    elif user_id in user_states:
+        mode = user_states[user_id].get("mode", None)
+        if mode == "attendance":
+            reply_text = process_step(user_id, user_input)
+        elif mode == "vacation":
+            reply_text = process_vacation_step(user_id, user_input)
+        else:
+            reply_text = "勤怠または休暇情報を入力する場合は、「勤怠」または「休暇」というメッセージを書いてください。"
     else:
-        # 勤怠入力モードに入っていない場合
-        reply_text = "勤怠情報を入力する場合は、「勤怠」というメッセージを書いてください。"
+        # 勤怠または休暇入力モードに入っていない場合
+        reply_text = "勤怠または休暇情報を入力する場合は、「勤怠」または「休暇」というメッセージを書いてください。"
 
     # メッセージを返信
     reply_message = ReplyMessageRequest(
