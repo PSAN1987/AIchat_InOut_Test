@@ -153,15 +153,6 @@ def handle_message(event):
         # 休暇入力モードに入る
         user_states[user_id] = {"vacation_step": 1, "mode": "vacation"}
         reply_text = "休暇入力モードに入りました。休暇日を入力してください (YYYY-MM-DD):"
-    elif user_id in user_states:
-        mode = user_states[user_id].get("mode", None)
-        if mode == "attendance":
-            reply_text = process_step(user_id, user_input)
-        elif mode == "vacation":
-            reply_text = process_vacation_step(user_id, user_input)
-        else:
-            # ここで通常のメッセージに対する処理を行う
-            reply_text = "勤怠または休暇情報を入力する場合は、「勤怠」または「休暇」というメッセージを書いてください。"
     else:
         # モードに入っていない場合に返すメッセージ
         reply_text = "勤怠または休暇情報を入力する場合は、「勤怠」または「休暇」というメッセージを書いてください。"
