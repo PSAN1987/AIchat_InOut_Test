@@ -160,9 +160,10 @@ def handle_message(event):
         elif mode == "vacation":
             reply_text = process_vacation_step(user_id, user_input)
         else:
+            # ここで通常のメッセージに対する処理を行う
             reply_text = "勤怠または休暇情報を入力する場合は、「勤怠」または「休暇」というメッセージを書いてください。"
     else:
-        # 勤怠または休暇入力モードに入っていない場合
+        # モードに入っていない場合に返すメッセージ
         reply_text = "勤怠または休暇情報を入力する場合は、「勤怠」または「休暇」というメッセージを書いてください。"
 
     # メッセージを返信
