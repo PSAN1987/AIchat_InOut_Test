@@ -170,5 +170,18 @@ def handle_message(event):
     )
     messaging_api.reply_message(reply_message)
 
+# LINEからのリクエストを処理
+@app.route("/callback", methods=['POST'])
+def callback():
+    signature = request.headers['X-Line-Signature']
+
+    # リクエストの検証
+    try:
+        handler.handle(request.get_data(as_text=True), signature)
+    except InvalidSignatureError:
+        abort(400)
+
+    return 'OK'
+
 if __name__ == "__main__":
     app.run(port=8000)
