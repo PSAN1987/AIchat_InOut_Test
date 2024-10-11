@@ -62,42 +62,64 @@ def process_step(user_id, user_input):
 
     if step == 1:
         state["name"] = user_input
-        reply_text = "出勤日を入力してください (YYYY-MM-DD) 例 2024-01-01:"
+        reply_text = "勤務日を入力してください (YYYY-MM-DD) 例 2024-01-01:"
         state["step"] = 2
     elif step == 2:
-        state["work_date"] = user_input
+        state["work_day"] = user_input
         reply_text = "出勤時間を入力してください (HH:MM) 例 8:00:"
         state["step"] = 3
     elif step == 3:
-        state["check_in_time"] = user_input
+        state["work_start"] = user_input
         reply_text = "退勤時間を入力してください (HH:MM) 例 17:00:"
         state["step"] = 4
     elif step == 4:
-        state["check_out_time"] = user_input
-        reply_text = "休憩時間を入力してください (HH:MM) 例 1:00:"
+        state["work_end"] = user_input
+        reply_text = "休憩開始時間を入力してください (HH:MM) 例 12:00:"
         state["step"] = 5
     elif step == 5:
-        state["break_time"] = user_input
-        reply_text = "業務サマリを入力してください 例 アプリ開発:"
+        state["break_start"] = user_input
+        reply_text = "休憩終了時間を入力してください (HH:MM) 例 13:00:"
         state["step"] = 6
     elif step == 6:
-        state["work_summary"] = user_input
-        reply_text = f"確認してください:\n名前: {state['name']}\n出勤日: {state['work_date']}\n出勤時間: {state['check_in_time']}\n退勤時間: {state['check_out_time']}\n休憩時間: {state['break_time']}\n業務サマリ: {state['work_summary']}\nこの内容でよろしいですか? (Y/N) 例 Y"
+        state["break_end"] = user_input
+        reply_text = "業務日報を入力してください 例 アプリ開発:"
         state["step"] = 7
     elif step == 7:
+        state["work_summary"] = user_input
+        # デバイスを "SP" に設定
+        state["device"] = "SP"
+        reply_text = (
+            f"確認してください:\n"
+            f"名前: {state['name']}\n"
+            f"勤務日: {state['work_day']}\n"
+            f"出勤時間: {state['work_start']}\n"
+            f"退勤時間: {state['work_end']}\n"
+            f"休憩開始時間: {state['break_start']}\n"
+            f"休憩終了時間: {state['break_end']}\n"
+            f"業務日報: {state['work_summary']}\n"
+            f"勤怠打刻デバイス: {state['device']}\n"
+            "この内容でよろしいですか? (Y/N) 例 Y"
+        )
+        state["step"] = 8
+    elif step == 8:
         if user_input.lower() == 'y':
             # データベースに保存
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute(
-                "INSERT INTO attendance (name, work_date, check_in_time, check_out_time, break_time, work_summary, line_id) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                (state["name"], state["work_date"], state["check_in_time"], state["check_out_time"], state["break_time"], state["work_summary"], user_id)
+                "INSERT INTO attendance (name, work_day, work_start, work_end, break_start, break_end, work_summary, device, line_id) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    state["name"], state["work_day"], state["work_start"], state["work_end"],
+                    state["break_start"], state["break_end"], state["work_summary"],
+                    state["device"], user_id
+                )
             )
             conn.commit()
             cur.close()
             conn.close()
             reply_text = "勤怠情報が保存されました。"
-            state["step"] = 0  # 状態をリセットして勤怠入力モードから抜ける
+            state["step"] = 0  # 状態をリセット
         else:
             reply_text = "もう一度最初から入力してください。名前を入力してください:"
             state["step"] = 1
@@ -131,7 +153,7 @@ def process_vacation_step(user_id, user_input):
             cur.close()
             conn.close()
             reply_text = "休暇情報が保存されました。"
-            state["vacation_step"] = 0  # 状態をリセットして休暇入力モードから抜ける
+            state["vacation_step"] = 0  # 状態をリセット
         else:
             reply_text = "もう一度最初から入力してください。休暇日を入力してください (YYYY-MM-DD):"
             state["vacation_step"] = 1
