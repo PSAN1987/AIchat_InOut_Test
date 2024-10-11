@@ -13,6 +13,7 @@ from linebot.v3.webhooks import (
     MessageEvent, TextMessageContent
 )
 import logging
+import traceback
 
 # .envファイルを読み込む
 load_dotenv()
@@ -55,6 +56,31 @@ def get_db_connection():
 # ユーザごとの勤怠入力状態と休暇入力状態を保持する辞書
 user_states = {}
 
+# データベースに保存する処理
+def save_attendance_to_db(state, user_id):
+    try:
+        # データベースに保存
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO attendance (name, work_day, work_start, work_end, break_start, break_end, work_summary, device, line_id) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (
+                state["name"], state["work_day"], state["work_start"], state["work_end"],
+                state["break_start"], state["break_end"], state["work_summary"],
+                state["device"], user_id
+            )
+        )
+        conn.commit()  # コミットすることでデータベースに保存される
+        cur.close()
+        conn.close()
+        return True
+    except Exception as e:
+        # エラー内容をログに記録
+        logger.error(f"Failed to save attendance: {e}")
+        logger.error(traceback.format_exc())
+        return False
+
 # 勤怠入力ステップの処理関数
 def process_step(user_id, user_input):
     state = user_states.get(user_id, {"step": 0})
@@ -86,8 +112,7 @@ def process_step(user_id, user_input):
         state["step"] = 7
     elif step == 7:
         state["work_summary"] = user_input
-        # デバイスを "SP" に設定
-        state["device"] = "SP"
+        state["device"] = "SP"  # デバイスを "SP" に設定
         reply_text = (
             f"確認してください:\n"
             f"名前: {state['name']}\n"
@@ -103,23 +128,12 @@ def process_step(user_id, user_input):
         state["step"] = 8
     elif step == 8:
         if user_input.lower() == 'y':
-            # データベースに保存
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute(
-                "INSERT INTO attendance (name, work_day, work_start, work_end, break_start, break_end, work_summary, device, line_id) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                (
-                    state["name"], state["work_day"], state["work_start"], state["work_end"],
-                    state["break_start"], state["break_end"], state["work_summary"],
-                    state["device"], user_id
-                )
-            )
-            conn.commit()
-            cur.close()
-            conn.close()
-            reply_text = "勤怠情報が保存されました。"
-            state["step"] = 0  # 状態をリセット
+            # データベースに保存を試みる
+            if save_attendance_to_db(state, user_id):
+                reply_text = "勤怠情報が保存されました。"
+                state["step"] = 0  # 状態をリセット
+            else:
+                reply_text = "勤怠情報の保存に失敗しました。もう一度お試しください。"
         else:
             reply_text = "もう一度最初から入力してください。名前を入力してください:"
             state["step"] = 1
@@ -143,17 +157,22 @@ def process_vacation_step(user_id, user_input):
     elif step == 3:
         if user_input.lower() == 'y':
             # データベースに保存
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute(
-                "INSERT INTO vacation (vacation_date, vacation_type, line_id) VALUES (%s, %s, %s)",
-                (state["vacation_date"], state["vacation_type"], user_id)
-            )
-            conn.commit()
-            cur.close()
-            conn.close()
-            reply_text = "休暇情報が保存されました。"
-            state["vacation_step"] = 0  # 状態をリセット
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                cur.execute(
+                    "INSERT INTO vacation (vacation_date, vacation_type, line_id) VALUES (%s, %s, %s)",
+                    (state["vacation_date"], state["vacation_type"], user_id)
+                )
+                conn.commit()
+                cur.close()
+                conn.close()
+                reply_text = "休暇情報が保存されました。"
+                state["vacation_step"] = 0  # 状態をリセット
+            except Exception as e:
+                logger.error(f"Failed to save vacation: {e}")
+                logger.error(traceback.format_exc())
+                reply_text = "休暇情報の保存に失敗しました。もう一度お試しください。"
         else:
             reply_text = "もう一度最初から入力してください。休暇日を入力してください (YYYY-MM-DD):"
             state["vacation_step"] = 1
