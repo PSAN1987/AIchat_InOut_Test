@@ -7,7 +7,7 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     ApiClient, Configuration, MessagingApi,
-    ReplyMessageRequest, TextMessage
+    ReplyMessageRequest, TextMessage, FlexMessage
 )
 from linebot.v3.webhooks import (
     MessageEvent, TextMessageContent
@@ -53,13 +53,114 @@ def get_db_connection():
     )
     return conn
 
-# ユーザごとの勤怠入力状態と休暇入力状態を保持する辞書
+# ユーザごとの勤怠入力状態を保持する辞書
 user_states = {}
 
-# データベースに保存する処理
+# 勤務日選択 (YYYY-MM-DD)
+def create_date_flex_message():
+    flex_message = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "勤務日を選んでください:",
+                    "wrap": True
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "style": "primary",
+                            "action": {
+                                "type": "datetimepicker",
+                                "label": "勤務日を選択",
+                                "data": "work_day",
+                                "mode": "date",
+                                "initial": "2024-10-22",
+                                "min": "2024-01-01",
+                                "max": "2025-12-31"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+    return FlexMessage(alt_text="勤務日選択", contents=flex_message)
+
+# 出勤時間、退勤時間、休憩開始時間、休憩終了時間選択 (HH:MM)
+def create_time_flex_message(label, data):
+    flex_message = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": f"{label}を選んでください:",
+                    "wrap": True
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "style": "primary",
+                            "action": {
+                                "type": "datetimepicker",
+                                "label": f"{label}を選択",
+                                "data": data,
+                                "mode": "time",
+                                "initial": "08:00",
+                                "min": "00:00",
+                                "max": "23:59"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+    return FlexMessage(alt_text=f"{label}選択", contents=flex_message)
+
+# 業務日報入力 (テキストボックス)
+def create_work_summary_flex_message():
+    flex_message = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "業務日報を入力してください:",
+                    "wrap": True
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "テキストボックスに業務日報を入力してください。"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+    return FlexMessage(alt_text="業務日報入力", contents=flex_message)
+
+# 勤怠情報をデータベースに保存する関数
 def save_attendance_to_db(state, user_id):
     try:
-        # データベースに保存
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
@@ -71,12 +172,11 @@ def save_attendance_to_db(state, user_id):
                 state["device"], user_id
             )
         )
-        conn.commit()  # コミットすることでデータベースに保存される
+        conn.commit()
         cur.close()
         conn.close()
         return True
     except Exception as e:
-        # エラー内容をログに記録
         logger.error(f"Failed to save attendance: {e}")
         logger.error(traceback.format_exc())
         return False
@@ -88,31 +188,31 @@ def process_step(user_id, user_input):
 
     if step == 1:
         state["name"] = user_input
-        reply_text = "勤務日を入力してください (YYYY-MM-DD) 例 2024-01-01:"
+        reply_flex_message = create_date_flex_message()
         state["step"] = 2
     elif step == 2:
         state["work_day"] = user_input
-        reply_text = "出勤時間を入力してください (HH:MM) 例 8:00:"
+        reply_flex_message = create_time_flex_message("出勤時間", "work_start")
         state["step"] = 3
     elif step == 3:
         state["work_start"] = user_input
-        reply_text = "退勤時間を入力してください (HH:MM) 例 17:00:"
+        reply_flex_message = create_time_flex_message("退勤時間", "work_end")
         state["step"] = 4
     elif step == 4:
         state["work_end"] = user_input
-        reply_text = "休憩開始時間を入力してください (HH:MM) 例 12:00:"
+        reply_flex_message = create_time_flex_message("休憩開始時間", "break_start")
         state["step"] = 5
     elif step == 5:
         state["break_start"] = user_input
-        reply_text = "休憩終了時間を入力してください (HH:MM) 例 13:00:"
+        reply_flex_message = create_time_flex_message("休憩終了時間", "break_end")
         state["step"] = 6
     elif step == 6:
         state["break_end"] = user_input
-        reply_text = "業務日報を入力してください 例 アプリ開発:"
+        reply_flex_message = create_work_summary_flex_message()
         state["step"] = 7
     elif step == 7:
         state["work_summary"] = user_input
-        state["device"] = "SP"  # デバイスを "SP" に設定
+        state["device"] = "SP"
         reply_text = (
             f"確認してください:\n"
             f"名前: {state['name']}\n"
@@ -126,12 +226,12 @@ def process_step(user_id, user_input):
             "この内容でよろしいですか? (Y/N) 例 Y"
         )
         state["step"] = 8
+        return reply_text, None
     elif step == 8:
         if user_input.lower() == 'y':
-            # データベースに保存を試みる
             if save_attendance_to_db(state, user_id):
                 reply_text = "勤怠情報が保存されました。"
-                state["step"] = 0  # 状態をリセット
+                state["step"] = 0
             else:
                 reply_text = "勤怠情報の保存に失敗しました。もう一度お試しください。"
         else:
@@ -139,46 +239,7 @@ def process_step(user_id, user_input):
             state["step"] = 1
 
     user_states[user_id] = state
-    return reply_text
-
-# 休暇入力ステップの処理関数
-def process_vacation_step(user_id, user_input):
-    state = user_states.get(user_id, {"vacation_step": 0})
-    step = state.get("vacation_step", 0)
-
-    if step == 1:
-        state["vacation_date"] = user_input
-        reply_text = "休暇の種類を選択してください (全日休, 午前休, 午後休):"
-        state["vacation_step"] = 2
-    elif step == 2:
-        state["vacation_type"] = user_input
-        reply_text = f"確認してください:\n休暇日: {state['vacation_date']}\n休暇種類: {state['vacation_type']}\nこの内容でよろしいですか? (Y/N) 例 Y"
-        state["vacation_step"] = 3
-    elif step == 3:
-        if user_input.lower() == 'y':
-            # データベースに保存
-            try:
-                conn = get_db_connection()
-                cur = conn.cursor()
-                cur.execute(
-                    "INSERT INTO vacation (vacation_date, vacation_type, line_id) VALUES (%s, %s, %s)",
-                    (state["vacation_date"], state["vacation_type"], user_id)
-                )
-                conn.commit()
-                cur.close()
-                conn.close()
-                reply_text = "休暇情報が保存されました。"
-                state["vacation_step"] = 0  # 状態をリセット
-            except Exception as e:
-                logger.error(f"Failed to save vacation: {e}")
-                logger.error(traceback.format_exc())
-                reply_text = "休暇情報の保存に失敗しました。もう一度お試しください。"
-        else:
-            reply_text = "もう一度最初から入力してください。休暇日を入力してください (YYYY-MM-DD):"
-            state["vacation_step"] = 1
-
-    user_states[user_id] = state
-    return reply_text
+    return reply_text, reply_flex_message
 
 # メッセージイベントの処理
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -187,36 +248,44 @@ def handle_message(event):
     user_input = event.message.text.strip()
 
     if user_input == "勤怠":
-        # 勤怠入力モードに入る
         user_states[user_id] = {"step": 1, "mode": "attendance"}
         reply_text = "勤怠入力モードに入りました。名前を入力してください:"
-    elif user_input == "休暇":
-        # 休暇入力モードに入る
-        user_states[user_id] = {"vacation_step": 1, "mode": "vacation"}
-        reply_text = "休暇入力モードに入りました。休暇日を入力してください (YYYY-MM-DD):"
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=reply_text)]
+            )
+        )
     elif user_id in user_states and user_states[user_id].get("step", 0) > 0:
-        # 勤怠入力ステップの処理を続ける
-        reply_text = process_step(user_id, user_input)
-    elif user_id in user_states and user_states[user_id].get("vacation_step", 0) > 0:
-        # 休暇入力ステップの処理を続ける
-        reply_text = process_vacation_step(user_id, user_input)
+        reply_text, reply_flex_message = process_step(user_id, user_input)
+        if reply_flex_message:
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[reply_flex_message]
+                )
+            )
+        else:
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=reply_text)]
+                )
+            )
     else:
-        # 勤怠または休暇入力モードに入っていない場合、一般的なメッセージに対応
         reply_text = "勤怠または休暇情報を入力する場合は、「勤怠」または「休暇」というメッセージを書いてください。"
-
-    # メッセージを返信
-    reply_message = ReplyMessageRequest(
-        reply_token=event.reply_token,
-        messages=[TextMessage(text=reply_text)]
-    )
-    messaging_api.reply_message(reply_message)
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=reply_text)]
+            )
+        )
 
 # LINEからのリクエストを処理
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Signature']
 
-    # リクエストの検証
     try:
         handler.handle(request.get_data(as_text=True), signature)
     except InvalidSignatureError:
