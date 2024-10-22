@@ -186,6 +186,10 @@ def process_step(user_id, user_input):
     state = user_states.get(user_id, {"step": 0})
     step = state.get("step", 0)
 
+    # 初期化
+    reply_text = None
+    reply_flex_message = None
+
     if step == 1:
         state["name"] = user_input
         reply_flex_message = create_date_flex_message()
@@ -226,12 +230,11 @@ def process_step(user_id, user_input):
             "この内容でよろしいですか? (Y/N) 例 Y"
         )
         state["step"] = 8
-        return reply_text, None
     elif step == 8:
         if user_input.lower() == 'y':
             if save_attendance_to_db(state, user_id):
                 reply_text = "勤怠情報が保存されました。"
-                state["step"] = 0
+                state["step"] = 0  # 状態をリセット
             else:
                 reply_text = "勤怠情報の保存に失敗しました。もう一度お試しください。"
         else:
@@ -240,6 +243,7 @@ def process_step(user_id, user_input):
 
     user_states[user_id] = state
     return reply_text, reply_flex_message
+
 
 # メッセージイベントの処理
 @handler.add(MessageEvent, message=TextMessageContent)
