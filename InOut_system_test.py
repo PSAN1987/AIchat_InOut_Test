@@ -70,23 +70,17 @@ def create_date_flex_message():
                     "wrap": True
                 },
                 {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "style": "primary",
-                            "action": {
-                                "type": "datetimepicker",
-                                "label": "勤務日を選択",
-                                "data": "work_day",
-                                "mode": "date",
-                                "initial": "2024-10-22",
-                                "min": "2024-01-01",
-                                "max": "2025-12-31"
-                            }
-                        }
-                    ]
+                    "type": "button",
+                    "style": "primary",
+                    "action": {
+                        "type": "datetimepicker",
+                        "label": "勤務日を選択",
+                        "data": "work_day",
+                        "mode": "date",
+                        "initial": "2024-10-22",
+                        "min": "2024-01-01",
+                        "max": "2025-12-31"
+                    }
                 }
             ]
         }
@@ -107,23 +101,17 @@ def create_time_flex_message(label, data):
                     "wrap": True
                 },
                 {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "style": "primary",
-                            "action": {
-                                "type": "datetimepicker",
-                                "label": f"{label}を選択",
-                                "data": data,
-                                "mode": "time",
-                                "initial": "08:00",
-                                "min": "00:00",
-                                "max": "23:59"
-                            }
-                        }
-                    ]
+                    "type": "button",
+                    "style": "primary",
+                    "action": {
+                        "type": "datetimepicker",
+                        "label": f"{label}を選択",
+                        "data": data,
+                        "mode": "time",
+                        "initial": "08:00",
+                        "min": "00:00",
+                        "max": "23:59"
+                    }
                 }
             ]
         }
@@ -243,7 +231,6 @@ def process_step(user_id, user_input):
 
     user_states[user_id] = state
     return reply_text, reply_flex_message
-
 
 # メッセージイベントの処理
 @handler.add(MessageEvent, message=TextMessageContent)
