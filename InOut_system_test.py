@@ -230,8 +230,7 @@ if __name__ == "__main__":
 
 
 # Adding imports specific for rich menu
-from linebot.v3.messaging import RichMenuRequest, RichMenuArea, RichMenuBounds, RichMenuSize
-from linebot.v3.models.actions import PostbackAction
+from linebot.v3.messaging import RichMenuRequest, RichMenuArea, RichMenuBounds, RichMenuSize, RichMenuAction
 
 # Define function to create the rich menu with Attendance and Vacation modes
 def create_rich_menu(client):
@@ -244,14 +243,16 @@ def create_rich_menu(client):
         areas=[
             RichMenuArea(
                 bounds=RichMenuBounds(x=0, y=0, width=1250, height=843),  # Left half for Attendance Mode
-                action=PostbackAction(
+                action=RichMenuAction(
+                    type="postback",
                     data="mode=attendance",
                     display_text="Attendance Mode"
                 )
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(x=1251, y=0, width=1250, height=843),  # Right half for Vacation Mode
-                action=PostbackAction(
+                action=RichMenuAction(
+                    type="postback",
                     data="mode=vacation",
                     display_text="Vacation Mode"
                 )
