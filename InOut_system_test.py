@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import os
 import psycopg2
@@ -84,28 +83,39 @@ def save_attendance_to_db(state, user_id):
 
 # 勤怠入力ステップの処理関数
 def process_step(user_id, user_input):
+    from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction
+    def create_flex_message(reply_text):
+        # Define a basic Flex Message with reply_text as the content for simplicity.
+        bubble = BubbleContainer(
+            body=BoxComponent(
+                layout="vertical",
+                contents=[TextComponent(text=reply_text, wrap=True)]
+            )
+        )
+        return FlexSendMessage(alt_text="選択してください", contents=bubble)
+
     state = user_states.get(user_id, {"step": 0})
     step = state.get("step", 0)
 
     if step == 1:
         state["name"] = user_input
-        reply_text = "勤務日を入力してください (YYYY-MM-DD) 例 2024-01-01:"
+        reply_text = create_flex_message("勤務日を入力してください (YYYY-MM-DD) 例 2024-01-01:")
         state["step"] = 2
     elif step == 2:
         state["work_day"] = user_input
-        reply_text = "出勤時間を入力してください (HH:MM) 例 8:00:"
+        reply_text = create_flex_message("出勤時間を入力してください (HH:MM) 例 8:00:")
         state["step"] = 3
     elif step == 3:
         state["work_start"] = user_input
-        reply_text = "退勤時間を入力してください (HH:MM) 例 17:00:"
+        reply_text = create_flex_message("退勤時間を入力してください (HH:MM) 例 17:00:")
         state["step"] = 4
     elif step == 4:
         state["work_end"] = user_input
-        reply_text = "休憩開始時間を入力してください (HH:MM) 例 12:00:"
+        reply_text = create_flex_message("休憩開始時間を入力してください (HH:MM) 例 12:00:")
         state["step"] = 5
     elif step == 5:
         state["break_start"] = user_input
-        reply_text = "休憩終了時間を入力してください (HH:MM) 例 13:00:"
+        reply_text = create_flex_message("休憩終了時間を入力してください (HH:MM) 例 13:00:")
         state["step"] = 6
     elif step == 6:
         state["break_end"] = user_input
@@ -227,81 +237,3 @@ def callback():
 
 if __name__ == "__main__":
     app.run(port=8000)
-
-
-# Adding imports specific for rich menu
-from linebot.v3.messaging import RichMenuRequest, RichMenuArea, RichMenuBounds, RichMenuSize, RichMenuAction
-
-# Define function to create the rich menu with Attendance and Vacation modes
-def create_rich_menu(client):
-    # Create a rich menu with Attendance and Vacation mode options
-    rich_menu_request = RichMenuRequest(
-        size=RichMenuSize(width=2500, height=843),  # Standard size for a full-width rich menu
-        selected=True,
-        name="Attendance-Vacation Mode Menu",
-        chat_bar_text="Select Mode",
-        areas=[
-            RichMenuArea(
-                bounds=RichMenuBounds(x=0, y=0, width=1250, height=843),  # Left half for Attendance Mode
-                action=RichMenuAction(
-                    type="postback",
-                    data="mode=attendance",
-                    display_text="Attendance Mode"
-                )
-            ),
-            RichMenuArea(
-                bounds=RichMenuBounds(x=1251, y=0, width=1250, height=843),  # Right half for Vacation Mode
-                action=RichMenuAction(
-                    type="postback",
-                    data="mode=vacation",
-                    display_text="Vacation Mode"
-                )
-            )
-        ]
-    )
-
-    # Send request to create the rich menu
-    rich_menu_id = client.create_rich_menu(rich_menu_request).rich_menu_id
-
-    # Set the rich menu as the default for users
-    client.set_default_rich_menu(rich_menu_id)
-    print("Rich menu created and set as default.")
-
-# Initialize the LINE Messaging API client
-client = MessagingApi(ApiClient(Configuration(access_token=CHANNEL_ACCESS_TOKEN)))
-
-# Call create_rich_menu to ensure the rich menu is available when the app starts
-create_rich_menu(client)
-
-# Handling user postback event to switch between attendance and vacation modes
-@app.route("/callback", methods=["POST"])
-def callback():
-    signature = request.headers.get("X-Line-Signature")
-    body = request.get_data(as_text=True)
-
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        abort(400)
-
-    return "OK"
-
-@handler.add(PostbackEvent)
-def handle_postback(event):
-    # Detecting the selected mode from the postback data
-    if event.postback.data == "mode=attendance":
-        response_text = "Switched to Attendance Mode."
-        # Set the application state to attendance mode (you may need to adjust state handling logic here)
-    elif event.postback.data == "mode=vacation":
-        response_text = "Switched to Vacation Mode."
-        # Set the application state to vacation mode (you may need to adjust state handling logic here)
-    else:
-        response_text = "Unknown command."
-
-    # Reply to the user
-    client.reply_message(
-        ReplyMessageRequest(
-            reply_token=event.reply_token,
-            messages=[TextMessage(text=response_text)]
-        )
-    )
