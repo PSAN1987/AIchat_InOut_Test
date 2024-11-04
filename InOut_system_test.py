@@ -218,7 +218,7 @@ def handle_message(event):
     # メッセージを返信
     reply_message = ReplyMessageRequest(
         reply_token=event.reply_token,
-        messages=[TextMessage(text=reply_text)]
+        messages=[reply_text] if isinstance(reply_text, FlexSendMessage) else [TextMessage(text=reply_text.text)]
     )
     messaging_api.reply_message(reply_message)
 
