@@ -83,39 +83,28 @@ def save_attendance_to_db(state, user_id):
 
 # 勤怠入力ステップの処理関数
 def process_step(user_id, user_input):
-    from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction
-    def create_flex_message(reply_text):
-        # Define a basic Flex Message with reply_text as the content for simplicity.
-        bubble = BubbleContainer(
-            body=BoxComponent(
-                layout="vertical",
-                contents=[TextComponent(text=reply_text, wrap=True)]
-            )
-        )
-        return FlexSendMessage(alt_text="選択してください", contents=bubble)
-
     state = user_states.get(user_id, {"step": 0})
     step = state.get("step", 0)
 
     if step == 1:
         state["name"] = user_input
-        reply_text = create_flex_message("勤務日を入力してください (YYYY-MM-DD) 例 2024-01-01:")
+        reply_text = "勤務日を入力してください (YYYY-MM-DD) 例 2024-01-01:"
         state["step"] = 2
     elif step == 2:
         state["work_day"] = user_input
-        reply_text = create_flex_message("出勤時間を入力してください (HH:MM) 例 8:00:")
+        reply_text = "出勤時間を入力してください (HH:MM) 例 8:00:"
         state["step"] = 3
     elif step == 3:
         state["work_start"] = user_input
-        reply_text = create_flex_message("退勤時間を入力してください (HH:MM) 例 17:00:")
+        reply_text = "退勤時間を入力してください (HH:MM) 例 17:00:"
         state["step"] = 4
     elif step == 4:
         state["work_end"] = user_input
-        reply_text = create_flex_message("休憩開始時間を入力してください (HH:MM) 例 12:00:")
+        reply_text = "休憩開始時間を入力してください (HH:MM) 例 12:00:"
         state["step"] = 5
     elif step == 5:
         state["break_start"] = user_input
-        reply_text = create_flex_message("休憩終了時間を入力してください (HH:MM) 例 13:00:")
+        reply_text = "休憩終了時間を入力してください (HH:MM) 例 13:00:"
         state["step"] = 6
     elif step == 6:
         state["break_end"] = user_input
@@ -218,7 +207,7 @@ def handle_message(event):
     # メッセージを返信
     reply_message = ReplyMessageRequest(
         reply_token=event.reply_token,
-        messages=[reply_text] if isinstance(reply_text, FlexSendMessage) else [TextMessage(text=reply_text.text)]
+        messages=[TextMessage(text=reply_text)]
     )
     messaging_api.reply_message(reply_message)
 
