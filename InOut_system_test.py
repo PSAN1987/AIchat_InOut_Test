@@ -152,7 +152,7 @@ def process_vacation_step(user_id, user_input):
         state["vacation_step"] = 2
     elif step == 2:
         state["vacation_type"] = user_input
-        reply_text = f"確認してください:\n休暇日: {state['vacation_date']}\n休暇種類: {state['vacation_type']}\nこの内容でよろしいですか? (Y/N) 例 Y"
+        reply_text = f"確認してください:\n休暇日: {state['vacation_date']}\n休暇種類: {state['vacation_type']}\nこの内容でよろしいですか? (y/n) 例 y"
         state["vacation_step"] = 3
     elif step == 3:
         if user_input.lower() == 'y':
