@@ -137,31 +137,31 @@ def process_step(user_id, user_input):
             reply_text = "出勤時間を入力してください (HH:MM) 例 8:00:"
             state["step"] = 3
         else:
-            reply_text = "無効な勤務日です。もう一度入力してください (YYYY-MM-DD) 例 2024-01-01:"
+            reply_text = "無効な勤務日です。もう一度入力してください (YYYY-MM-DD) 例 2024-01-01 or 20240101:"
     elif step == 3:
         work_start = validate_time(user_input)
         if work_start:
             state["work_start"] = work_start
-            reply_text = "退勤時間を入力してください (HH:MM) 例 17:00:"
+            reply_text = "退勤時間を入力してください (HH:MM) 例 17:00 or 1700:"
             state["step"] = 4
         else:
-            reply_text = "無効な出勤時間です。もう一度入力してください (HH:MM) 例 8:00:"
+            reply_text = "無効な出勤時間です。もう一度入力してください (HH:MM) 例 8:00 or 800:"
     elif step == 4:
         work_end = validate_time(user_input)
         if work_end:
             state["work_end"] = work_end
-            reply_text = "休憩開始時間を入力してください (HH:MM) 例 12:00:"
+            reply_text = "休憩開始時間を入力してください (HH:MM) 例 12:00 or 1200:"
             state["step"] = 5
         else:
-            reply_text = "無効な退勤時間です。もう一度入力してください (HH:MM) 例 17:00:"
+            reply_text = "無効な退勤時間です。もう一度入力してください (HH:MM) 例 17:00 or 1700:"
     elif step == 5:
         break_start = validate_time(user_input)
         if break_start:
             state["break_start"] = break_start
-            reply_text = "休憩終了時間を入力してください (HH:MM) 例 13:00:"
+            reply_text = "休憩終了時間を入力してください (HH:MM) 例 13:00 or 1300:"
             state["step"] = 6
         else:
-            reply_text = "無効な休憩開始時間です。もう一度入力してください (HH:MM) 例 12:00:"
+            reply_text = "無効な休憩開始時間です。もう一度入力してください (HH:MM) 例 12:00 or 1200:"
     elif step == 6:
         break_end = validate_time(user_input)
         if break_end:
@@ -169,7 +169,7 @@ def process_step(user_id, user_input):
             reply_text = "業務日報を入力してください 例 アプリ開発:"
             state["step"] = 7
         else:
-            reply_text = "無効な休憩終了時間です。もう一度入力してください (HH:MM) 例 13:00:"
+            reply_text = "無効な休憩終了時間です。もう一度入力してください (HH:MM) 例 13:00 or 1300:"
     elif step == 7:
         state["work_summary"] = user_input
         state["device"] = "SP"  # デバイスを "SP" に設定
@@ -183,19 +183,22 @@ def process_step(user_id, user_input):
             f"休憩終了時間: {state['break_end']}\n"
             f"業務日報: {state['work_summary']}\n"
             f"勤怠打刻デバイス: {state['device']}\n"
-            "この内容でよろしいですか? (Y/N) 例 Y"
+            "この内容でよろしいですか? (はい,y,Y,yes) 例 はい"
         )
         state["step"] = 8
     elif step == 8:
-        if user_input.lower() == 'y':
-            if save_attendance_to_db(state, user_id):
-                reply_text = "勤怠情報が保存されました。"
-                state["step"] = 0
-            else:
-                reply_text = "勤怠情報の保存に失敗しました。もう一度お試しください。"
+    if user_input.lower() in ['y', 'yes', 'はい']:
+        if save_attendance_to_db(state, user_id):
+            reply_text = "勤怠情報が保存されました。"
+            state.clear()  # 状態のクリア
+            state["step"] = 0
         else:
-            reply_text = "もう一度最初から入力してください。名前を入力してください:"
-            state["step"] = 1
+            reply_text = "勤怠情報の保存に失敗しました。もう一度お試しください。"
+    elif user_input.lower() in ['n', 'no', 'いいえ']:
+        reply_text = "もう一度最初から入力してください。名前を入力してください:"
+        state["step"] = 1
+    else:
+        reply_text = "無効な入力です。「Y」または「N」を入力してください。"
 
     user_states[user_id] = state
     return reply_text
