@@ -109,17 +109,26 @@ def validate_time(input_time):
     時間入力を検証し、HH:MM形式に変換する。
     """
     try:
-        # 例: 0800 -> 08:00
-        if re.match(r"^\d{4}$", input_time):  # 4桁の場合
+        # 1. 1桁または2桁のみ（例: "8" -> "08:00"）
+        if re.match(r"^\d{1,2}$", input_time):
+            hour = int(input_time)
+            return f"{hour:02}:00"
+        # 2. 1桁または2桁の時と1桁の分（例: "8:0" -> "08:00"）
+        elif re.match(r"^\d{1,2}:\d{1}$", input_time):
+            hour, minute = map(int, input_time.split(":"))
+            return f"{hour:02}:{minute:02}"
+        # 3. 1桁または2桁の時と2桁の分（例: "8:30" -> "08:30"）
+        elif re.match(r"^\d{1,2}:\d{2}$", input_time):
+            hour, minute = map(int, input_time.split(":"))
+            return f"{hour:02}:{minute:02}"
+        # 4. 4桁の数字（例: "0800" -> "08:00"）
+        elif re.match(r"^\d{4}$", input_time):
             return datetime.strptime(input_time, "%H%M").strftime("%H:%M")
-        # 例: 8:00 -> 08:00 または 800 -> 08:00
-        elif re.match(r"^\d{1,2}:\d{2}$", input_time) or re.match(r"^\d{1,3}$", input_time):
-            time_obj = datetime.strptime(input_time.zfill(4), "%H%M")
-            return time_obj.strftime("%H:%M")
         else:
             return None  # 無効な形式
     except ValueError:
         return None  # 無効な時間
+
 
 # 修正された勤怠入力ステップ関数
 def process_step(user_id, user_input):
@@ -134,7 +143,7 @@ def process_step(user_id, user_input):
         work_day = validate_date(user_input)
         if work_day:
             state["work_day"] = work_day
-            reply_text = "出勤時間を入力してください (HH:MM) 例 8:00:"
+            reply_text = "出勤時間を入力してください (HH:MM) 例 8:00 or 8 or 800 -> 08:00:"
             state["step"] = 3
         else:
             reply_text = "無効な勤務日です。もう一度入力してください (YYYY-MM-DD) 例 2024-01-01 or 20240101:"
@@ -142,7 +151,7 @@ def process_step(user_id, user_input):
         work_start = validate_time(user_input)
         if work_start:
             state["work_start"] = work_start
-            reply_text = "退勤時間を入力してください (HH:MM) 例 17:00 or 1700:"
+            reply_text = "退勤時間を入力してください (HH:MM) 例 17:00 or 17 or 1700 -> 17:00 :"
             state["step"] = 4
         else:
             reply_text = "無効な出勤時間です。もう一度入力してください (HH:MM) 例 8:00 or 800:"
@@ -150,7 +159,7 @@ def process_step(user_id, user_input):
         work_end = validate_time(user_input)
         if work_end:
             state["work_end"] = work_end
-            reply_text = "休憩開始時間を入力してください (HH:MM) 例 12:00 or 1200:"
+            reply_text = "休憩開始時間を入力してください (HH:MM) 例 12:00 or 12 or 1200 -> 12:00:"
             state["step"] = 5
         else:
             reply_text = "無効な退勤時間です。もう一度入力してください (HH:MM) 例 17:00 or 1700:"
@@ -158,7 +167,7 @@ def process_step(user_id, user_input):
         break_start = validate_time(user_input)
         if break_start:
             state["break_start"] = break_start
-            reply_text = "休憩終了時間を入力してください (HH:MM) 例 13:00 or 1300:"
+            reply_text = "休憩終了時間を入力してください (HH:MM) 例 13:00 or 13 or 1300 -> 13;00:"
             state["step"] = 6
         else:
             reply_text = "無効な休憩開始時間です。もう一度入力してください (HH:MM) 例 12:00 or 1200:"
@@ -187,18 +196,18 @@ def process_step(user_id, user_input):
         )
         state["step"] = 8
     elif step == 8:
-    if user_input.lower() in ['y', 'yes', 'はい']:
-        if save_attendance_to_db(state, user_id):
-            reply_text = "勤怠情報が保存されました。"
-            state.clear()  # 状態のクリア
-            state["step"] = 0
+        if user_input.lower() in ['y', 'yes', 'はい']:
+            if save_attendance_to_db(state, user_id):
+                reply_text = "勤怠情報が保存されました。"
+                state.clear()  # 状態のクリア
+                state["step"] = 0
+            else:
+                reply_text = "勤怠情報の保存に失敗しました。もう一度お試しください。"
+        elif user_input.lower() in ['n', 'no', 'いいえ']:
+            reply_text = "もう一度最初から入力してください。名前を入力してください:"
+            state["step"] = 1
         else:
-            reply_text = "勤怠情報の保存に失敗しました。もう一度お試しください。"
-    elif user_input.lower() in ['n', 'no', 'いいえ']:
-        reply_text = "もう一度最初から入力してください。名前を入力してください:"
-        state["step"] = 1
-    else:
-        reply_text = "無効な入力です。「Y」または「N」を入力してください。"
+            reply_text = "無効な入力です。「Y」または「N」を入力してください。"
 
     user_states[user_id] = state
     return reply_text
