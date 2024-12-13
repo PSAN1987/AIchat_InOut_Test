@@ -14,6 +14,9 @@ from linebot.v3.webhooks import (
 )
 import logging
 import traceback
+import re
+from datetime import datetime
+
 
 # .envファイルを読み込む
 load_dotenv()
@@ -81,7 +84,44 @@ def save_attendance_to_db(state, user_id):
         logger.error(traceback.format_exc())
         return False
 
-# 勤怠入力ステップの処理関数
+import re
+from datetime import datetime
+
+# バリデーション関数
+def validate_date(input_date):
+    """
+    日付入力を検証し、YYYY-MM-DD形式に変換する。
+    """
+    try:
+        # 例: 20240101 -> 2024-01-01
+        if re.match(r"^\d{8}$", input_date):  # 8桁の場合
+            return datetime.strptime(input_date, "%Y%m%d").strftime("%Y-%m-%d")
+        # 例: 2024-01-01 はそのまま
+        elif re.match(r"^\d{4}-\d{2}-\d{2}$", input_date):  # 正しい形式の場合
+            return input_date
+        else:
+            return None  # 無効な形式
+    except ValueError:
+        return None  # 無効な日付
+
+def validate_time(input_time):
+    """
+    時間入力を検証し、HH:MM形式に変換する。
+    """
+    try:
+        # 例: 0800 -> 08:00
+        if re.match(r"^\d{4}$", input_time):  # 4桁の場合
+            return datetime.strptime(input_time, "%H%M").strftime("%H:%M")
+        # 例: 8:00 -> 08:00 または 800 -> 08:00
+        elif re.match(r"^\d{1,2}:\d{2}$", input_time) or re.match(r"^\d{1,3}$", input_time):
+            time_obj = datetime.strptime(input_time.zfill(4), "%H%M")
+            return time_obj.strftime("%H:%M")
+        else:
+            return None  # 無効な形式
+    except ValueError:
+        return None  # 無効な時間
+
+# 修正された勤怠入力ステップ関数
 def process_step(user_id, user_input):
     state = user_states.get(user_id, {"step": 0})
     step = state.get("step", 0)
@@ -91,25 +131,45 @@ def process_step(user_id, user_input):
         reply_text = "勤務日を入力してください (YYYY-MM-DD) 例 2024-01-01:"
         state["step"] = 2
     elif step == 2:
-        state["work_day"] = user_input
-        reply_text = "出勤時間を入力してください (HH:MM) 例 8:00:"
-        state["step"] = 3
+        work_day = validate_date(user_input)
+        if work_day:
+            state["work_day"] = work_day
+            reply_text = "出勤時間を入力してください (HH:MM) 例 8:00:"
+            state["step"] = 3
+        else:
+            reply_text = "無効な勤務日です。もう一度入力してください (YYYY-MM-DD) 例 2024-01-01:"
     elif step == 3:
-        state["work_start"] = user_input
-        reply_text = "退勤時間を入力してください (HH:MM) 例 17:00:"
-        state["step"] = 4
+        work_start = validate_time(user_input)
+        if work_start:
+            state["work_start"] = work_start
+            reply_text = "退勤時間を入力してください (HH:MM) 例 17:00:"
+            state["step"] = 4
+        else:
+            reply_text = "無効な出勤時間です。もう一度入力してください (HH:MM) 例 8:00:"
     elif step == 4:
-        state["work_end"] = user_input
-        reply_text = "休憩開始時間を入力してください (HH:MM) 例 12:00:"
-        state["step"] = 5
+        work_end = validate_time(user_input)
+        if work_end:
+            state["work_end"] = work_end
+            reply_text = "休憩開始時間を入力してください (HH:MM) 例 12:00:"
+            state["step"] = 5
+        else:
+            reply_text = "無効な退勤時間です。もう一度入力してください (HH:MM) 例 17:00:"
     elif step == 5:
-        state["break_start"] = user_input
-        reply_text = "休憩終了時間を入力してください (HH:MM) 例 13:00:"
-        state["step"] = 6
+        break_start = validate_time(user_input)
+        if break_start:
+            state["break_start"] = break_start
+            reply_text = "休憩終了時間を入力してください (HH:MM) 例 13:00:"
+            state["step"] = 6
+        else:
+            reply_text = "無効な休憩開始時間です。もう一度入力してください (HH:MM) 例 12:00:"
     elif step == 6:
-        state["break_end"] = user_input
-        reply_text = "業務日報を入力してください 例 アプリ開発:"
-        state["step"] = 7
+        break_end = validate_time(user_input)
+        if break_end:
+            state["break_end"] = break_end
+            reply_text = "業務日報を入力してください 例 アプリ開発:"
+            state["step"] = 7
+        else:
+            reply_text = "無効な休憩終了時間です。もう一度入力してください (HH:MM) 例 13:00:"
     elif step == 7:
         state["work_summary"] = user_input
         state["device"] = "SP"  # デバイスを "SP" に設定
@@ -128,10 +188,9 @@ def process_step(user_id, user_input):
         state["step"] = 8
     elif step == 8:
         if user_input.lower() == 'y':
-            # データベースに保存を試みる
             if save_attendance_to_db(state, user_id):
                 reply_text = "勤怠情報が保存されました。"
-                state["step"] = 0  # 状態をリセット
+                state["step"] = 0
             else:
                 reply_text = "勤怠情報の保存に失敗しました。もう一度お試しください。"
         else:
@@ -140,6 +199,7 @@ def process_step(user_id, user_input):
 
     user_states[user_id] = state
     return reply_text
+
 
 # 休暇入力ステップの処理関数
 def process_vacation_step(user_id, user_input):
