@@ -167,7 +167,7 @@ def process_step(user_id, user_input):
         break_start = validate_time(user_input)
         if break_start:
             state["break_start"] = break_start
-            reply_text = "休憩終了時間を入力してください (HH:MM) 例えば13:00でも13でも1300でも13;00と認識されます:"
+            reply_text = "休憩終了時間を入力してください (HH:MM) 例えば13:00でも13でも1300でも13:00と認識されます:"
             state["step"] = 6
         else:
             reply_text = "無効な休憩開始時間です。もう一度入力してください (HH:MM) 例 12:00 or 1200:"
